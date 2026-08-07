@@ -1,0 +1,224 @@
+import { useState, useEffect, useCallback } from 'react';
+import type { Recipe, ShoppingItem, Screen } from './types';
+import { fetchRecipes, insertRecipe, insertRecipes, updateRecipe, deleteRecipe } from './supabase';
+import { DEFAULT_RECIPES } from './defaults';
+import HomeScreen from './components/HomeScreen';
+import RecipeDetail from './components/RecipeDetail';
+import RecipeForm from './components/RecipeForm';
+import ShoppingList from './components/ShoppingList';
+
+function loadFromStorage<T>(key: string, fallback: T): T {
+  try {
+    const stored = localStorage.getItem(key);
+    return stored ? (JSON.parse(stored) as T) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+export default function App() {
+  const [screenStack, setScreenStack] = useState<Screen[]>(['home']);
+  const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
+  const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
+
+  const [favorites, setFavorites] = useState<string[]>(() =>
+    loadFromStorage<string[]>('mk_favorites', [])
+  );
+  const [shoppingList, setShoppingList] = useState<ShoppingItem[]>(() =>
+    loadFromStorage<ShoppingItem[]>('mk_shopping', [])
+  );
+
+  const currentScreen = screenStack[screenStack.length - 1];
+
+  const pushScreen = (screen: Screen) => setScreenStack((prev) => [...prev, screen]);
+  const goBack = () => setScreenStack((prev) => (prev.length > 1 ? prev.slice(0, -1) : prev));
+
+  // Persist favorites
+  useEffect(() => {
+    localStorage.setItem('mk_favorites', JSON.stringify(favorites));
+  }, [favorites]);
+
+  // Persist shopping list
+  useEffect(() => {
+    localStorage.setItem('mk_shopping', JSON.stringify(shoppingList));
+  }, [shoppingList]);
+
+  // Load recipes from Supabase on mount
+  const loadRecipes = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await fetchRecipes();
+      if (data.length > 0) {
+        setRecipes(data);
+      } else {
+        try {
+          const seeded = await insertRecipes(DEFAULT_RECIPES);
+          setRecipes(seeded.length > 0 ? seeded : DEFAULT_RECIPES.map((r, i) => ({ ...r, id: `local-${i}` })));
+        } catch {
+          setRecipes(DEFAULT_RECIPES.map((r, i) => ({ ...r, id: `local-${i}` })));
+        }
+      }
+    } catch {
+      setRecipes(DEFAULT_RECIPES.map((r, i) => ({ ...r, id: `local-${i}` })));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadRecipes();
+  }, [loadRecipes]);
+
+  // --- Favorite handlers ---
+  const handleToggleFavorite = (id: string) => {
+    setFavorites((prev) =>
+      prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id]
+    );
+  };
+
+  // --- Shopping list handlers ---
+  const handleAddToShoppingList = (items: string[]) => {
+    const newItems: ShoppingItem[] = items.map((name) => ({
+      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      name,
+      checked: false,
+    }));
+    setShoppingList((prev) => {
+      const existingNames = new Set(prev.map((i) => i.name.toLowerCase()));
+      const unique = newItems.filter((i) => !existingNames.has(i.name.toLowerCase()));
+      return [...prev, ...unique];
+    });
+    pushScreen('shopping');
+  };
+
+  const handleAddShoppingItem = (name: string) => {
+    setShoppingList((prev) => [
+      ...prev,
+      { id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, name, checked: false },
+    ]);
+  };
+
+  const handleToggleShoppingItem = (id: string) => {
+    setShoppingList((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, checked: !item.checked } : item))
+    );
+  };
+
+  const handleRemoveShoppingItem = (id: string) => {
+    setShoppingList((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const handleCheckAllItems = () => {
+    setShoppingList((prev) => prev.map((item) => ({ ...item, checked: true })));
+  };
+
+  const handleClearShoppingList = () => {
+    setShoppingList([]);
+  };
+
+  // --- Recipe CRUD ---
+  const handleSaveRecipe = async (data: Omit<Recipe, 'id' | 'created_at'>) => {
+    if (editingRecipe) {
+      try {
+        const updated = await updateRecipe(editingRecipe.id, data);
+        setRecipes((prev) => prev.map((r) => (r.id === editingRecipe.id ? updated : r)));
+      } catch {
+        setRecipes((prev) =>
+          prev.map((r) => (r.id === editingRecipe.id ? { ...r, ...data } : r))
+        );
+      }
+    } else {
+      try {
+        const created = await insertRecipe(data);
+        setRecipes((prev) => [created, ...prev]);
+      } catch {
+        const tempRecipe: Recipe = {
+          ...data,
+          id: `local-${Date.now()}`,
+          created_at: new Date().toISOString(),
+        };
+        setRecipes((prev) => [tempRecipe, ...prev]);
+      }
+    }
+    goBack();
+  };
+
+  const handleDeleteRecipe = async () => {
+    if (!editingRecipe) return;
+    try {
+      await deleteRecipe(editingRecipe.id);
+    } catch {
+      // Continue with local delete even if Supabase fails
+    }
+    setRecipes((prev) => prev.filter((r) => r.id !== editingRecipe.id));
+    setFavorites((prev) => prev.filter((id) => id !== editingRecipe.id));
+    setScreenStack(['home']);
+    setEditingRecipe(null);
+    setSelectedRecipeId(null);
+  };
+
+  const selectedRecipe = recipes.find((r) => r.id === selectedRecipeId) ?? null;
+
+  return (
+    <div className="max-w-lg mx-auto min-h-screen relative" style={{ backgroundColor: '#F5EDE4' }}>
+      {currentScreen === 'home' && (
+        <HomeScreen
+          recipes={recipes}
+          favorites={favorites}
+          loading={loading}
+          onSelectRecipe={(id) => {
+            setSelectedRecipeId(id);
+            pushScreen('detail');
+          }}
+          onEditRecipe={(recipe) => {
+            setEditingRecipe(recipe);
+            pushScreen('form');
+          }}
+          onAddRecipe={() => {
+            setEditingRecipe(null);
+            pushScreen('form');
+          }}
+          onOpenShopping={() => pushScreen('shopping')}
+          onToggleFavorite={handleToggleFavorite}
+        />
+      )}
+
+      {currentScreen === 'detail' && selectedRecipe && (
+        <RecipeDetail
+          recipe={selectedRecipe}
+          isFavorite={favorites.includes(selectedRecipe.id)}
+          onBack={goBack}
+          onEdit={() => {
+            setEditingRecipe(selectedRecipe);
+            pushScreen('form');
+          }}
+          onToggleFavorite={() => handleToggleFavorite(selectedRecipe.id)}
+          onAddToShoppingList={handleAddToShoppingList}
+        />
+      )}
+
+      {currentScreen === 'form' && (
+        <RecipeForm
+          editingRecipe={editingRecipe}
+          onBack={goBack}
+          onSave={handleSaveRecipe}
+          onDelete={handleDeleteRecipe}
+        />
+      )}
+
+      {currentScreen === 'shopping' && (
+        <ShoppingList
+          items={shoppingList}
+          onBack={goBack}
+          onToggle={handleToggleShoppingItem}
+          onRemove={handleRemoveShoppingItem}
+          onAdd={handleAddShoppingItem}
+          onCheckAll={handleCheckAllItems}
+          onClear={handleClearShoppingList}
+        />
+      )}
+    </div>
+  );
+}
