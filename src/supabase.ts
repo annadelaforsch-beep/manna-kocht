@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Recipe } from './types';
 
-const supabaseUrl = 'https://jtamkmnlfhczkwstywvj.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp0YW1rbW5sZmhjemt3c3R5d3ZqIiwicm9sZWiOiJhbm9uIiwiaWF0IjoxNzg2MTA3MzM0LCJleHAiOjIxMDE2ODMzMzR9.T3o6jbU-NyATkxjbdknAJAe-QraEpazeMTF8J5Caqsg';
+const supabaseUrl = 'https://jcjfzzoeceafkysfcgnz.supabase.co';
+const supabaseKey = 'sb_publishable_jmEkqN7PoLcqMlgYWn4V3A_8D6R-hrE';
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
 

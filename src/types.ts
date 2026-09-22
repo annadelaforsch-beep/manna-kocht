@@ -4,6 +4,7 @@ export interface Recipe {
   category: string;
   time_minutes: number;
   emoji: string;
+  image_url?: string | null;
   ingredients: string;
   instructions: string;
   macro_veggies: number;

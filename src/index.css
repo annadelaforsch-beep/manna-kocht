@@ -1,15 +1,15 @@
 @import "tailwindcss";
 
 @theme {
-  --color-app: #F5EDE4;
-  --color-accent: #3C6538;
-  --color-accent-dark: #2D4D29;
-  --color-accent-light: #EBF3EA;
-  --color-sand: #CAAD82;
-  --color-sand-light: #F0E8D8;
-  --color-sand-dark: #B8955E;
+  --color-app: #FAF6F0;
+  --color-accent: #264653;
+  --color-accent-dark: #17262B;
+  --color-accent-light: #E1EAE9;
+  --color-sand: #7A8F94;
+  --color-sand-light: #FBEFD6;
+  --color-sand-dark: #B5652E;
   --color-ink: #23283A;
-  --color-rose-soft: #F5D0D0;
+  --color-rose-soft: #F6DAD1;
   --font-family-serif: 'Playfair Display', Georgia, serif;
 }
 
@@ -19,7 +19,7 @@
 
 body {
   margin: 0;
-  background-color: #F5EDE4;
+  background-color: #FAF6F0;
   font-family: system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
@@ -48,5 +48,5 @@ html {
 
 /* Custom checkbox */
 input[type="checkbox"] {
-  accent-color: #3C6538;
+  accent-color: #264653;
 }

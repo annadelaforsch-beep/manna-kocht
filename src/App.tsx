@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import type { Recipe, ShoppingItem, Screen } from './types';
 import { fetchRecipes, insertRecipe, insertRecipes, updateRecipe, deleteRecipe } from './supabase';
 import { DEFAULT_RECIPES } from './defaults';
+import { COLORS } from './theme';
 import HomeScreen from './components/HomeScreen';
 import RecipeDetail from './components/RecipeDetail';
 import RecipeForm from './components/RecipeForm';
@@ -162,7 +163,7 @@ export default function App() {
   const selectedRecipe = recipes.find((r) => r.id === selectedRecipeId) ?? null;
 
   return (
-    <div className="max-w-lg mx-auto min-h-screen relative" style={{ backgroundColor: '#F5EDE4' }}>
+    <div className="max-w-lg mx-auto min-h-screen relative" style={{ backgroundColor: COLORS.bg }}>
       {currentScreen === 'home' && (
         <HomeScreen
           recipes={recipes}
