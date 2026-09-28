@@ -50,8 +50,22 @@ export default function RecipeDetail({
           ←
         </button>
 
-        {/* Edit + Favorite */}
+        {/* Quelle + Edit + Favorite */}
         <div className="absolute top-12 right-4 flex gap-2">
+          {recipe.source_url && (
+            <a
+              href={recipe.source_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-10 h-10 rounded-full flex items-center justify-center bg-white/80 backdrop-blur-sm shadow-sm transition-transform active:scale-90"
+              aria-label="Original-Rezept öffnen"
+              title="Original-Rezept öffnen"
+            >
+              <svg className="w-4 h-4" fill="none" stroke={COLORS.primary} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 17L17 7M17 7H7M17 7V17" />
+              </svg>
+            </a>
+          )}
           <button
             onClick={onToggleFavorite}
             className="w-10 h-10 rounded-full flex items-center justify-center bg-white/80 backdrop-blur-sm shadow-sm text-xl transition-transform active:scale-90"

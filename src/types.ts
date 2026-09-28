@@ -5,6 +5,7 @@ export interface Recipe {
   time_minutes: number;
   emoji: string;
   image_url?: string | null;
+  source_url?: string | null;
   ingredients: string;
   instructions: string;
   macro_veggies: number;

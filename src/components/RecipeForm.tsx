@@ -18,6 +18,7 @@ export default function RecipeForm({ editingRecipe, onBack, onSave, onDelete }: 
   const [timeMinutes, setTimeMinutes] = useState(editingRecipe?.time_minutes ?? 20);
   const [emoji, setEmoji] = useState(editingRecipe?.emoji ?? '🍽️');
   const [imageUrl, setImageUrl] = useState<string | null>(editingRecipe?.image_url ?? null);
+  const [sourceUrl, setSourceUrl] = useState<string | null>(editingRecipe?.source_url ?? null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -61,6 +62,7 @@ export default function RecipeForm({ editingRecipe, onBack, onSave, onDelete }: 
         time_minutes: timeMinutes,
         emoji,
         image_url: imageUrl,
+        source_url: sourceUrl,
         ingredients: ingredients.trim(),
         instructions: instructions.trim(),
         macro_veggies: macroVeggies,
@@ -91,6 +93,7 @@ export default function RecipeForm({ editingRecipe, onBack, onSave, onDelete }: 
       setInstructions(extracted.instructions);
       setTip(extracted.tip ?? '');
       setImageUrl(extracted.image_url ?? null);
+      setSourceUrl(trimmed);
       setImportedFromLink(true);
     } catch (err) {
       setImportedFromLink(false);
