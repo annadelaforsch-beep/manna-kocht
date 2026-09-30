@@ -11,6 +11,7 @@ interface Props {
   onEditRecipe: (recipe: Recipe) => void;
   onAddRecipe: () => void;
   onOpenShopping: () => void;
+  onOpenWeekPlan: () => void;
   onToggleFavorite: (id: string) => void;
 }
 
@@ -22,6 +23,7 @@ export default function HomeScreen({
   onEditRecipe,
   onAddRecipe,
   onOpenShopping,
+  onOpenWeekPlan,
   onToggleFavorite,
 }: Props) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -146,6 +148,14 @@ export default function HomeScreen({
         className="fixed right-5 flex items-center gap-3 z-30"
         style={{ bottom: 'calc(1.5rem + env(safe-area-inset-bottom))' }}
       >
+        <button
+          onClick={onOpenWeekPlan}
+          className="w-12 h-12 rounded-full flex items-center justify-center shadow-lg text-xl transition-transform active:scale-95"
+          style={{ backgroundColor: COLORS.surface, boxShadow: '0 2px 10px rgba(35,40,58,0.15)' }}
+          aria-label="Wochenplan"
+        >
+          📅
+        </button>
         <button
           onClick={onOpenShopping}
           className="w-12 h-12 rounded-full flex items-center justify-center shadow-lg text-xl transition-transform active:scale-95"

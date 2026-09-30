@@ -22,7 +22,14 @@ export interface ShoppingItem {
   category?: string;
 }
 
-export type Screen = 'home' | 'detail' | 'form' | 'shopping';
+export interface MealPlanEntry {
+  id: string;
+  plan_date: string; // 'YYYY-MM-DD'
+  recipe_id: string;
+  created_at?: string;
+}
+
+export type Screen = 'home' | 'detail' | 'form' | 'shopping' | 'weekplan';
 
 export const CATEGORIES = [
   'Frühstück',

@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { Recipe, ShoppingItem, Screen } from './types';
+import type { Recipe, ShoppingItem, Screen, MealPlanEntry } from './types';
 import { fetchRecipes, insertRecipe, insertRecipes, updateRecipe, deleteRecipe } from './supabase';
+import { fetchMealPlan, setMealPlanEntry, clearMealPlanEntry } from './mealPlan';
 import { DEFAULT_RECIPES } from './defaults';
 import { COLORS } from './theme';
 import HomeScreen from './components/HomeScreen';
 import RecipeDetail from './components/RecipeDetail';
 import RecipeForm from './components/RecipeForm';
 import ShoppingList from './components/ShoppingList';
+import WeekPlan from './components/WeekPlan';
 
 function loadFromStorage<T>(key: string, fallback: T): T {
   try {
@@ -30,6 +32,8 @@ export default function App() {
   const [shoppingList, setShoppingList] = useState<ShoppingItem[]>(() =>
     loadFromStorage<ShoppingItem[]>('mk_shopping', [])
   );
+  const [mealPlanEntries, setMealPlanEntries] = useState<MealPlanEntry[]>([]);
+  const [mealPlanLoading, setMealPlanLoading] = useState(true);
 
   const currentScreen = screenStack[screenStack.length - 1];
 
@@ -71,6 +75,26 @@ export default function App() {
   useEffect(() => {
     loadRecipes();
   }, [loadRecipes]);
+
+  // Wochenplan laden (aktuelle Woche + Historie der letzten ~8 Wochen)
+  const loadMealPlan = useCallback(async () => {
+    setMealPlanLoading(true);
+    try {
+      const since = new Date();
+      since.setDate(since.getDate() - 56);
+      const sinceKey = since.toISOString().slice(0, 10);
+      const data = await fetchMealPlan(sinceKey);
+      setMealPlanEntries(data);
+    } catch {
+      setMealPlanEntries([]);
+    } finally {
+      setMealPlanLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadMealPlan();
+  }, [loadMealPlan]);
 
   // --- Favorite handlers ---
   const handleToggleFavorite = (id: string) => {
@@ -117,6 +141,27 @@ export default function App() {
 
   const handleClearShoppingList = () => {
     setShoppingList([]);
+  };
+
+  // --- Wochenplan handlers ---
+  const handleAssignMealPlan = async (planDate: string, recipeId: string) => {
+    const optimistic: MealPlanEntry = { id: `local-${planDate}`, plan_date: planDate, recipe_id: recipeId };
+    setMealPlanEntries((prev) => [...prev.filter((e) => e.plan_date !== planDate), optimistic]);
+    try {
+      const saved = await setMealPlanEntry(planDate, recipeId);
+      setMealPlanEntries((prev) => prev.map((e) => (e.plan_date === planDate ? saved : e)));
+    } catch {
+      // Optimistisches Update bleibt bestehen, auch wenn Supabase nicht erreichbar ist
+    }
+  };
+
+  const handleClearMealPlan = async (planDate: string) => {
+    setMealPlanEntries((prev) => prev.filter((e) => e.plan_date !== planDate));
+    try {
+      await clearMealPlanEntry(planDate);
+    } catch {
+      // lokal ist der Eintrag bereits entfernt
+    }
   };
 
   // --- Recipe CRUD ---
@@ -182,6 +227,7 @@ export default function App() {
             pushScreen('form');
           }}
           onOpenShopping={() => pushScreen('shopping')}
+          onOpenWeekPlan={() => pushScreen('weekplan')}
           onToggleFavorite={handleToggleFavorite}
         />
       )}
@@ -218,6 +264,22 @@ export default function App() {
           onAdd={handleAddShoppingItem}
           onCheckAll={handleCheckAllItems}
           onClear={handleClearShoppingList}
+        />
+      )}
+
+      {currentScreen === 'weekplan' && (
+        <WeekPlan
+          recipes={recipes}
+          entries={mealPlanEntries}
+          loading={mealPlanLoading}
+          onBack={goBack}
+          onAssign={handleAssignMealPlan}
+          onClear={handleClearMealPlan}
+          onAddWeekToShoppingList={handleAddToShoppingList}
+          onSelectRecipe={(id) => {
+            setSelectedRecipeId(id);
+            pushScreen('detail');
+          }}
         />
       )}
     </div>
