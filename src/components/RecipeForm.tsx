@@ -1,9 +1,11 @@
 import { useRef, useState } from 'react';
 import type { Recipe } from '../types';
-import { CATEGORIES, FOOD_EMOJIS } from '../types';
+import { CATEGORIES } from '../types';
 import { extractRecipeFromUrl } from '../extractRecipe';
 import { uploadRecipeImage } from '../uploadImage';
 import { COLORS } from '../theme';
+import { RECIPE_ICONS, getRecipeIcon } from '../icons';
+import { Camera, Link2, Check, Trash2, LeafyGreen, Wheat, Nut, type LucideIcon } from 'lucide-react';
 
 interface Props {
   editingRecipe: Recipe | null;
@@ -16,7 +18,7 @@ export default function RecipeForm({ editingRecipe, onBack, onSave, onDelete }: 
   const [name, setName] = useState(editingRecipe?.name ?? '');
   const [category, setCategory] = useState(editingRecipe?.category ?? CATEGORIES[0]);
   const [timeMinutes, setTimeMinutes] = useState(editingRecipe?.time_minutes ?? 20);
-  const [emoji, setEmoji] = useState(editingRecipe?.emoji ?? '🍽️');
+  const [icon, setIcon] = useState(editingRecipe?.emoji ?? 'utensils');
   const [imageUrl, setImageUrl] = useState<string | null>(editingRecipe?.image_url ?? null);
   const [sourceUrl, setSourceUrl] = useState<string | null>(editingRecipe?.source_url ?? null);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -30,7 +32,7 @@ export default function RecipeForm({ editingRecipe, onBack, onSave, onDelete }: 
   const [tip, setTip] = useState(editingRecipe?.tip ?? '');
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showIconPicker, setShowIconPicker] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
 
@@ -60,7 +62,7 @@ export default function RecipeForm({ editingRecipe, onBack, onSave, onDelete }: 
         name: name.trim(),
         category,
         time_minutes: timeMinutes,
-        emoji,
+        emoji: icon,
         image_url: imageUrl,
         source_url: sourceUrl,
         ingredients: ingredients.trim(),
@@ -88,7 +90,7 @@ export default function RecipeForm({ editingRecipe, onBack, onSave, onDelete }: 
       setName(extracted.name);
       setCategory(extracted.category);
       setTimeMinutes(extracted.time_minutes);
-      setEmoji(extracted.emoji);
+      setIcon(extracted.emoji);
       setIngredients(extracted.ingredients);
       setInstructions(extracted.instructions);
       setTip(extracted.tip ?? '');
@@ -175,8 +177,9 @@ export default function RecipeForm({ editingRecipe, onBack, onSave, onDelete }: 
             className="rounded-2xl p-4 space-y-3"
             style={{ backgroundColor: COLORS.surface, boxShadow: '0 1px 4px rgba(35,40,58,0.08)' }}
           >
-            <label className="block text-sm font-semibold" style={{ color: COLORS.ink }}>
-              🔗 Rezept von einer Website übernehmen
+            <label className="flex items-center gap-2 text-sm font-semibold" style={{ color: COLORS.ink }}>
+              <Link2 size={16} strokeWidth={2} />
+              Rezept von einer Website übernehmen
             </label>
             <div className="flex gap-2">
               <input
@@ -200,8 +203,9 @@ export default function RecipeForm({ editingRecipe, onBack, onSave, onDelete }: 
               <p className="text-sm" style={{ color: COLORS.danger }}>{extractError}</p>
             )}
             {importedFromLink && !extractError && (
-              <p className="text-sm" style={{ color: COLORS.primary }}>
-                ✓ Übernommen – bitte unten prüfen und bei Bedarf anpassen (Makros bitte selbst setzen).
+              <p className="flex items-start gap-1.5 text-sm" style={{ color: COLORS.primary }}>
+                <Check size={16} strokeWidth={2.5} className="flex-shrink-0 mt-0.5" />
+                Übernommen – bitte unten prüfen und bei Bedarf anpassen (Makros bitte selbst setzen).
               </p>
             )}
             <p className="text-xs" style={{ color: COLORS.muted }}>
@@ -255,48 +259,64 @@ export default function RecipeForm({ editingRecipe, onBack, onSave, onDelete }: 
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={uploadingImage}
-              className="w-full py-4 rounded-2xl text-sm font-medium transition-all active:scale-98 disabled:opacity-60"
+              className="w-full py-4 rounded-2xl text-sm font-medium transition-all active:scale-98 disabled:opacity-60 flex items-center justify-center gap-2"
               style={{ backgroundColor: COLORS.surface, color: COLORS.ink, boxShadow: '0 1px 4px rgba(35,40,58,0.08)' }}
             >
-              {uploadingImage ? 'Wird hochgeladen…' : '📷 Foto hochladen'}
+              {uploadingImage ? (
+                'Wird hochgeladen…'
+              ) : (
+                <>
+                  <Camera size={18} strokeWidth={2} />
+                  Foto hochladen
+                </>
+              )}
             </button>
           )}
           {imageError && (
             <p className="text-sm mt-2" style={{ color: COLORS.danger }}>{imageError}</p>
           )}
           <p className="text-xs mt-2" style={{ color: COLORS.muted }}>
-            Kein Foto? Dann wird ersatzweise das Emoji unten angezeigt.
+            Kein Foto? Dann wird ersatzweise das Icon unten angezeigt.
           </p>
         </FormSection>
 
-        {/* Emoji picker */}
-        <FormSection title="Emoji">
-          <button
-            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-            className="w-16 h-16 rounded-2xl flex items-center justify-center text-4xl mb-2 transition-transform active:scale-95"
-            style={{ backgroundColor: COLORS.surface, boxShadow: '0 1px 4px rgba(35,40,58,0.1)' }}
-          >
-            {emoji}
-          </button>
-          {showEmojiPicker && (
+        {/* Icon picker */}
+        <FormSection title="Icon">
+          {(() => {
+            const SelectedIcon = getRecipeIcon(icon);
+            return (
+              <button
+                onClick={() => setShowIconPicker(!showIconPicker)}
+                className="w-16 h-16 rounded-2xl flex items-center justify-center mb-2 transition-transform active:scale-95"
+                style={{ backgroundColor: COLORS.surface, boxShadow: '0 1px 4px rgba(35,40,58,0.1)' }}
+              >
+                <SelectedIcon size={28} strokeWidth={1.75} color={COLORS.primary} />
+              </button>
+            );
+          })()}
+          {showIconPicker && (
             <div
               className="rounded-2xl p-3 grid gap-1"
               style={{
                 backgroundColor: COLORS.surface,
-                gridTemplateColumns: 'repeat(8, 1fr)',
+                gridTemplateColumns: 'repeat(6, 1fr)',
                 boxShadow: '0 4px 16px rgba(35,40,58,0.12)',
               }}
             >
-              {FOOD_EMOJIS.map((e) => (
-                <button
-                  key={e}
-                  onClick={() => { setEmoji(e); setShowEmojiPicker(false); }}
-                  className="w-9 h-9 flex items-center justify-center rounded-xl text-xl transition-all hover:bg-gray-100 active:scale-90"
-                  style={{ backgroundColor: e === emoji ? COLORS.primaryLight : undefined }}
-                >
-                  {e}
-                </button>
-              ))}
+              {RECIPE_ICONS.map((key) => {
+                const ItemIcon = getRecipeIcon(key);
+                const isSelected = key === icon;
+                return (
+                  <button
+                    key={key}
+                    onClick={() => { setIcon(key); setShowIconPicker(false); }}
+                    className="w-9 h-9 flex items-center justify-center rounded-xl transition-all hover:bg-gray-100 active:scale-90"
+                    style={{ backgroundColor: isSelected ? COLORS.primaryLight : undefined }}
+                  >
+                    <ItemIcon size={18} strokeWidth={1.75} color={COLORS.ink} />
+                  </button>
+                );
+              })}
             </div>
           )}
         </FormSection>
@@ -400,7 +420,7 @@ export default function RecipeForm({ editingRecipe, onBack, onSave, onDelete }: 
         <FormSection title="Makros (müssen 100% ergeben)">
           <div className="grid grid-cols-3 gap-3">
             <MacroInput
-              icon="🥦"
+              icon={LeafyGreen}
               label="Gemüse %"
               value={macroVeggies}
               onChange={setMacroVeggies}
@@ -408,7 +428,7 @@ export default function RecipeForm({ editingRecipe, onBack, onSave, onDelete }: 
               color={COLORS.veggieText}
             />
             <MacroInput
-              icon="🌾"
+              icon={Wheat}
               label="Carbs %"
               value={macroCarbs}
               onChange={setMacroCarbs}
@@ -416,7 +436,7 @@ export default function RecipeForm({ editingRecipe, onBack, onSave, onDelete }: 
               color={COLORS.carbsText}
             />
             <MacroInput
-              icon="🫘"
+              icon={Nut}
               label="Protein %"
               value={macroProtein}
               onChange={setMacroProtein}
@@ -453,13 +473,20 @@ export default function RecipeForm({ editingRecipe, onBack, onSave, onDelete }: 
         <button
           onClick={handleSave}
           disabled={saving}
-          className="w-full py-4 rounded-2xl text-white font-semibold text-sm transition-all active:scale-98 disabled:opacity-60"
+          className="w-full py-4 rounded-2xl text-white font-semibold text-sm transition-all active:scale-98 disabled:opacity-60 flex items-center justify-center gap-2"
           style={{
             backgroundColor: COLORS.primary,
             boxShadow: '0 4px 16px rgba(38,70,83,0.35)',
           }}
         >
-          {saving ? 'Wird gespeichert…' : editingRecipe ? '✓ Änderungen speichern' : '✓ Rezept erstellen'}
+          {saving ? (
+            'Wird gespeichert…'
+          ) : (
+            <>
+              <Check size={18} strokeWidth={2.5} />
+              {editingRecipe ? 'Änderungen speichern' : 'Rezept erstellen'}
+            </>
+          )}
         </button>
 
         {/* Delete button */}
@@ -468,10 +495,11 @@ export default function RecipeForm({ editingRecipe, onBack, onSave, onDelete }: 
             {!showDeleteConfirm ? (
               <button
                 onClick={() => setShowDeleteConfirm(true)}
-                className="w-full py-3 rounded-2xl text-sm font-medium transition-all active:scale-98"
+                className="w-full py-3 rounded-2xl text-sm font-medium transition-all active:scale-98 flex items-center justify-center gap-2"
                 style={{ backgroundColor: COLORS.dangerLight, color: COLORS.danger }}
               >
-                🗑 Rezept löschen
+                <Trash2 size={16} strokeWidth={2} />
+                Rezept löschen
               </button>
             ) : (
               <div className="rounded-2xl p-4" style={{ backgroundColor: COLORS.dangerLight }}>
@@ -516,14 +544,14 @@ function FormSection({ title, children }: { title: string; children: React.React
 }
 
 function MacroInput({
-  icon,
+  icon: Icon,
   label,
   value,
   onChange,
   bg,
   color,
 }: {
-  icon: string;
+  icon: LucideIcon;
   label: string;
   value: number;
   onChange: (v: number) => void;
@@ -532,7 +560,7 @@ function MacroInput({
 }) {
   return (
     <div className="rounded-2xl p-3 flex flex-col items-center gap-1" style={{ backgroundColor: bg }}>
-      <span className="text-2xl">{icon}</span>
+      <Icon size={22} strokeWidth={1.75} color={color} />
       <input
         type="number"
         min={0}

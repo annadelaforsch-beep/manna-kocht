@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { ShoppingItem } from '../types';
 import { COLORS } from '../theme';
+import { ShoppingCart, Check, Trash2, X } from 'lucide-react';
 
 interface Props {
   items: ShoppingItem[];
@@ -105,7 +106,7 @@ export default function ShoppingList({ items, onToggle, onRemove, onAdd, onCheck
       <div className="px-5 space-y-3">
         {items.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <span className="text-5xl mb-4">🛒</span>
+            <ShoppingCart size={48} strokeWidth={1.5} color={COLORS.muted} className="mb-4" />
             <p className="text-base font-medium" style={{ color: COLORS.ink }}>Die Liste ist leer</p>
             <p className="text-sm mt-1" style={{ color: COLORS.muted }}>
               Füge Artikel hinzu oder öffne ein Rezept
@@ -132,8 +133,9 @@ export default function ShoppingList({ items, onToggle, onRemove, onAdd, onCheck
             {/* Checked items */}
             {checked.length > 0 && (
               <div>
-                <p className="text-xs font-semibold mb-2 mt-4" style={{ color: COLORS.muted }}>
-                  ✓ Bereits im Korb ({checked.length})
+                <p className="flex items-center gap-1 text-xs font-semibold mb-2 mt-4" style={{ color: COLORS.muted }}>
+                  <Check size={13} strokeWidth={2.5} />
+                  Bereits im Korb ({checked.length})
                 </p>
                 <div className="space-y-2">
                   {checked.map((item) => (
@@ -153,20 +155,22 @@ export default function ShoppingList({ items, onToggle, onRemove, onAdd, onCheck
               {unchecked.length > 0 && (
                 <button
                   onClick={onCheckAll}
-                  className="w-full py-3 rounded-2xl text-sm font-medium transition-all active:scale-98"
+                  className="w-full py-3 rounded-2xl text-sm font-medium transition-all active:scale-98 flex items-center justify-center gap-2"
                   style={{ backgroundColor: COLORS.primaryLight, color: COLORS.primary }}
                 >
-                  ✓ Alle abhaken
+                  <Check size={16} strokeWidth={2.5} />
+                  Alle abhaken
                 </button>
               )}
 
               {!showClearConfirm ? (
                 <button
                   onClick={() => setShowClearConfirm(true)}
-                  className="w-full py-3 rounded-2xl text-sm font-medium transition-all active:scale-98"
+                  className="w-full py-3 rounded-2xl text-sm font-medium transition-all active:scale-98 flex items-center justify-center gap-2"
                   style={{ backgroundColor: COLORS.dangerLight, color: COLORS.danger }}
                 >
-                  🗑 Liste leeren
+                  <Trash2 size={16} strokeWidth={2} />
+                  Liste leeren
                 </button>
               ) : (
                 <div className="rounded-2xl p-4" style={{ backgroundColor: COLORS.dangerLight }}>
@@ -226,7 +230,7 @@ function ShoppingItemRow({
         }}
         aria-label={item.checked ? 'Abhaken rückgängig' : 'Abhaken'}
       >
-        {item.checked && <span className="text-white text-xs">✓</span>}
+        {item.checked && <Check size={13} strokeWidth={3} color="#fff" />}
       </button>
 
       <span
@@ -242,11 +246,11 @@ function ShoppingItemRow({
 
       <button
         onClick={onRemove}
-        className="w-7 h-7 flex items-center justify-center rounded-full text-sm transition-all active:scale-90"
+        className="w-7 h-7 flex items-center justify-center rounded-full transition-all active:scale-90"
         style={{ color: COLORS.muted }}
         aria-label="Löschen"
       >
-        ✕
+        <X size={14} strokeWidth={2} />
       </button>
     </div>
   );

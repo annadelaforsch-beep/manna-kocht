@@ -2,6 +2,8 @@ import { useState } from 'react';
 import type { Recipe, FilterOption } from '../types';
 import { FILTER_OPTIONS } from '../types';
 import { COLORS, getCategoryTint } from '../theme';
+import { getRecipeIcon } from '../icons';
+import { Utensils, Heart, Pencil, LeafyGreen, Wheat, Nut } from 'lucide-react';
 
 interface Props {
   recipes: Recipe[];
@@ -102,7 +104,7 @@ export default function HomeScreen({
         className="mx-5 mb-5 rounded-2xl px-4 py-3 flex items-center gap-3"
         style={{ backgroundColor: COLORS.surface, boxShadow: '0 1px 4px rgba(35,40,58,0.08)' }}
       >
-        <span className="text-xl">🍽️</span>
+        <Utensils size={20} strokeWidth={2} color={COLORS.primary} className="flex-shrink-0" />
         <div className="text-sm" style={{ color: COLORS.ink }}>
           <span className="font-semibold" style={{ color: COLORS.primary }}>Eat the Rainbow</span>
           <span style={{ color: COLORS.muted }}> &nbsp;·&nbsp; 50% Gemüse &nbsp;·&nbsp; 25% Carbs &nbsp;·&nbsp; 25% Protein</span>
@@ -119,7 +121,7 @@ export default function HomeScreen({
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <span className="text-5xl mb-4">🍽️</span>
+            <Utensils size={48} strokeWidth={1.5} color={COLORS.muted} className="mb-4" />
             <p className="text-base font-medium" style={{ color: COLORS.ink }}>Kein Rezept gefunden</p>
             <p className="text-sm mt-1" style={{ color: COLORS.muted }}>Füge ein neues Rezept hinzu!</p>
           </div>
@@ -183,25 +185,33 @@ function RecipeCard({
         {recipe.image_url ? (
           <img src={recipe.image_url} alt="" className="w-full h-full object-cover" />
         ) : (
-          <span className="text-6xl select-none">{recipe.emoji}</span>
+          (() => {
+            const RecipeIcon = getRecipeIcon(recipe.emoji);
+            return <RecipeIcon size={48} strokeWidth={1.5} color={COLORS.primary} />;
+          })()
         )}
 
         {/* Favorite button */}
         <button
           onClick={(e) => { e.stopPropagation(); onFavorite(); }}
-          className="absolute top-3 right-10 w-8 h-8 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-sm text-base shadow-sm transition-transform active:scale-90"
+          className="absolute top-3 right-10 w-8 h-8 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-sm shadow-sm transition-transform active:scale-90"
           aria-label={isFavorite ? 'Favorit entfernen' : 'Favorit hinzufügen'}
         >
-          {isFavorite ? '❤️' : '🤍'}
+          <Heart
+            size={16}
+            strokeWidth={2}
+            color={COLORS.danger}
+            fill={isFavorite ? COLORS.danger : 'none'}
+          />
         </button>
 
         {/* Edit button */}
         <button
           onClick={(e) => { e.stopPropagation(); onEdit(); }}
-          className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-sm text-sm shadow-sm transition-transform active:scale-90"
+          className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-sm shadow-sm transition-transform active:scale-90"
           aria-label="Rezept bearbeiten"
         >
-          ✏️
+          <Pencil size={14} strokeWidth={2} color={COLORS.ink} />
         </button>
       </div>
 
@@ -222,22 +232,25 @@ function RecipeCard({
         {/* Macro badges */}
         <div className="flex gap-2 flex-wrap">
           <span
-            className="px-2 py-1 rounded-full text-xs font-medium"
+            className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium"
             style={{ backgroundColor: COLORS.veggieBg, color: COLORS.veggieText }}
           >
-            🥦 {recipe.macro_veggies}%
+            <LeafyGreen size={12} strokeWidth={2} />
+            {recipe.macro_veggies}%
           </span>
           <span
-            className="px-2 py-1 rounded-full text-xs font-medium"
+            className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium"
             style={{ backgroundColor: COLORS.carbsBg, color: COLORS.carbsText }}
           >
-            🌾 {recipe.macro_carbs}%
+            <Wheat size={12} strokeWidth={2} />
+            {recipe.macro_carbs}%
           </span>
           <span
-            className="px-2 py-1 rounded-full text-xs font-medium"
+            className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium"
             style={{ backgroundColor: COLORS.proteinBg, color: COLORS.proteinText }}
           >
-            🫘 {recipe.macro_protein}%
+            <Nut size={12} strokeWidth={2} />
+            {recipe.macro_protein}%
           </span>
         </div>
       </div>

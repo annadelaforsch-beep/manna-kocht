@@ -1,5 +1,6 @@
 import type { Screen } from '../types';
 import { COLORS } from '../theme';
+import { Utensils, Calendar, ShoppingCart, type LucideIcon } from 'lucide-react';
 
 export type TabScreen = Extract<Screen, 'home' | 'weekplan' | 'shopping'>;
 
@@ -8,10 +9,10 @@ interface Props {
   onChange: (tab: TabScreen) => void;
 }
 
-const TABS: { key: TabScreen; label: string; icon: string }[] = [
-  { key: 'home', label: 'Rezepte', icon: '🍽️' },
-  { key: 'weekplan', label: 'Wochenplan', icon: '📅' },
-  { key: 'shopping', label: 'Einkaufsliste', icon: '🛒' },
+const TABS: { key: TabScreen; label: string; icon: LucideIcon }[] = [
+  { key: 'home', label: 'Rezepte', icon: Utensils },
+  { key: 'weekplan', label: 'Wochenplan', icon: Calendar },
+  { key: 'shopping', label: 'Einkaufsliste', icon: ShoppingCart },
 ];
 
 export default function TabBar({ active, onChange }: Props) {
@@ -26,15 +27,14 @@ export default function TabBar({ active, onChange }: Props) {
     >
       {TABS.map((tab) => {
         const isActive = tab.key === active;
+        const Icon = tab.icon;
         return (
           <button
             key={tab.key}
             onClick={() => onChange(tab.key)}
             className="flex-1 flex flex-col items-center gap-0.5 py-2.5 transition-transform active:scale-95"
           >
-            <span className="text-xl" style={{ opacity: isActive ? 1 : 0.5 }}>
-              {tab.icon}
-            </span>
+            <Icon size={22} strokeWidth={isActive ? 2.25 : 1.75} color={isActive ? COLORS.primary : COLORS.muted} />
             <span
               className="text-[11px] font-medium"
               style={{ color: isActive ? COLORS.primary : COLORS.muted }}

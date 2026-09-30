@@ -25,12 +25,13 @@ const CATEGORIES = [
   'Süßes',
 ];
 
-const FOOD_EMOJIS = [
-  '🥣', '🥗', '🐟', '🥩', '🍳', '🥞', '🍜', '🍝', '🥘', '🫕',
-  '🥧', '🍰', '🎂', '🍩', '🍪', '🥐', '🥨', '🧀', '🥚', '🧆',
-  '🌮', '🌯', '🥙', '🧇', '🥓', '🥪', '🍱', '🍛', '🍲', '🫔',
-  '🥦', '🥕', '🥑', '🍋', '🍓', '🫐', '🍇', '🍒', '🍑', '🫙',
-  '🍽️', '🥄', '🍴', '🧂', '🫚', '🥜', '🌾', '🥬', '🍅', '🧅',
+// Muss exakt mit RECIPE_ICONS in src/icons.ts übereinstimmen.
+const RECIPE_ICONS = [
+  'utensils', 'chef-hat', 'soup', 'salad', 'fish', 'beef', 'drumstick', 'ham',
+  'egg', 'egg-fried', 'pizza', 'sandwich', 'hamburger', 'ice-cream', 'ice-cream-cone',
+  'cake', 'cake-slice', 'cupcake', 'cookie', 'croissant', 'donut', 'popcorn',
+  'wheat', 'carrot', 'apple', 'banana', 'cherry', 'grape', 'citrus', 'milk',
+  'coffee', 'wine', 'beer', 'candy', 'vegan', 'leafy-green', 'nut',
 ];
 
 const MODEL = 'claude-haiku-4-5';
@@ -189,7 +190,7 @@ Antworte AUSSCHLIESSLICH mit einem einzigen JSON-Objekt (keine Erklärung, kein 
   "name": "Kurzer, prägnanter Rezeptname",
   "category": "eine von genau diesen Optionen: ${CATEGORIES.join(', ')}",
   "time_minutes": Zahl (geschätzte Gesamtzeit in Minuten - falls nicht angegeben, realistisch schätzen),
-  "emoji": "ein passendes Emoji aus dieser Liste: ${FOOD_EMOJIS.join(' ')}",
+  "emoji": "einer von genau diesen Icon-Schlüsseln (exakt so schreiben, ohne Anführungszeichen im Wert selbst): ${RECIPE_ICONS.join(', ')}",
   "ingredients": "Zutaten als Text, eine Zutat pro Zeile (mit \\n getrennt), inkl. Mengenangaben",
   "instructions": "Zubereitungsschritte als Text, ein Schritt pro Zeile (mit \\n getrennt)",
   "tip": "ein kurzer hilfreicher Tipp aus dem Originaltext, falls vorhanden - sonst null"
@@ -216,7 +217,9 @@ function extractJson(text: string): any {
 
 function sanitizeRecipe(r: any) {
   const category = CATEGORIES.includes(r.category) ? r.category : CATEGORIES[0];
-  const emoji = typeof r.emoji === 'string' && r.emoji.trim() ? r.emoji.trim() : '🍽️';
+  const emoji = typeof r.emoji === 'string' && RECIPE_ICONS.includes(r.emoji.trim())
+    ? r.emoji.trim()
+    : 'utensils';
   const time = Number(r.time_minutes);
   return {
     name: String(r.name).trim().slice(0, 120),

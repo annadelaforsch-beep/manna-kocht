@@ -1,5 +1,7 @@
 import type { Recipe } from '../types';
 import { COLORS, getCategoryTint } from '../theme';
+import { getRecipeIcon } from '../icons';
+import { Heart, Pencil, Clock, LeafyGreen, Wheat, Nut, Lightbulb, ShoppingCart, type LucideIcon } from 'lucide-react';
 
 interface Props {
   recipe: Recipe;
@@ -30,7 +32,7 @@ export default function RecipeDetail({
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: COLORS.bg }}>
-      {/* Foto oder Emoji-Hero als Fallback */}
+      {/* Foto oder Icon-Hero als Fallback */}
       <div
         className="relative h-64 flex items-center justify-center overflow-hidden"
         style={{ backgroundColor: getCategoryTint(recipe.category) }}
@@ -38,7 +40,10 @@ export default function RecipeDetail({
         {recipe.image_url ? (
           <img src={recipe.image_url} alt="" className="w-full h-full object-cover" />
         ) : (
-          <span className="text-8xl select-none">{recipe.emoji}</span>
+          (() => {
+            const RecipeIcon = getRecipeIcon(recipe.emoji);
+            return <RecipeIcon size={80} strokeWidth={1.5} color={COLORS.primary} />;
+          })()
         )}
 
         {/* Back button */}
@@ -68,17 +73,17 @@ export default function RecipeDetail({
           )}
           <button
             onClick={onToggleFavorite}
-            className="w-10 h-10 rounded-full flex items-center justify-center bg-white/80 backdrop-blur-sm shadow-sm text-xl transition-transform active:scale-90"
+            className="w-10 h-10 rounded-full flex items-center justify-center bg-white/80 backdrop-blur-sm shadow-sm transition-transform active:scale-90"
             aria-label={isFavorite ? 'Favorit entfernen' : 'Als Favorit markieren'}
           >
-            {isFavorite ? '❤️' : '🤍'}
+            <Heart size={18} strokeWidth={2} color={COLORS.danger} fill={isFavorite ? COLORS.danger : 'none'} />
           </button>
           <button
             onClick={onEdit}
-            className="w-10 h-10 rounded-full flex items-center justify-center bg-white/80 backdrop-blur-sm shadow-sm text-base transition-transform active:scale-90"
+            className="w-10 h-10 rounded-full flex items-center justify-center bg-white/80 backdrop-blur-sm shadow-sm transition-transform active:scale-90"
             aria-label="Bearbeiten"
           >
-            ✏️
+            <Pencil size={16} strokeWidth={2} color={COLORS.ink} />
           </button>
         </div>
       </div>
@@ -96,7 +101,10 @@ export default function RecipeDetail({
           {recipe.name}
         </h1>
         <div className="flex items-center gap-3 text-sm mb-5" style={{ color: COLORS.muted }}>
-          <span>⏱ {recipe.time_minutes} Min</span>
+          <span className="flex items-center gap-1">
+            <Clock size={14} strokeWidth={2} />
+            {recipe.time_minutes} Min
+          </span>
           <span>·</span>
           <span
             className="px-3 py-1 rounded-full text-xs font-medium"
@@ -109,21 +117,21 @@ export default function RecipeDetail({
         {/* Macro cards */}
         <div className="grid grid-cols-3 gap-3 mb-6">
           <MacroCard
-            icon="🥦"
+            icon={LeafyGreen}
             label="Gemüse"
             value={recipe.macro_veggies}
             bg={COLORS.veggieBg}
             color={COLORS.veggieText}
           />
           <MacroCard
-            icon="🌾"
+            icon={Wheat}
             label="Carbs"
             value={recipe.macro_carbs}
             bg={COLORS.carbsBg}
             color={COLORS.carbsText}
           />
           <MacroCard
-            icon="🫘"
+            icon={Nut}
             label="Protein"
             value={recipe.macro_protein}
             bg={COLORS.proteinBg}
@@ -169,7 +177,7 @@ export default function RecipeDetail({
             className="rounded-2xl p-4 mb-6 flex items-start gap-3"
             style={{ backgroundColor: COLORS.tipBg, border: `1px solid ${COLORS.tipBorder}` }}
           >
-            <span className="text-xl flex-shrink-0">💡</span>
+            <Lightbulb size={20} strokeWidth={2} color={COLORS.tipText} className="flex-shrink-0" />
             <p className="text-sm leading-relaxed" style={{ color: COLORS.tipText }}>
               {recipe.tip}
             </p>
@@ -179,13 +187,14 @@ export default function RecipeDetail({
         {/* Add to shopping list button */}
         <button
           onClick={() => onAddToShoppingList(ingredients)}
-          className="w-full py-4 rounded-2xl text-white font-semibold text-sm transition-all active:scale-98"
+          className="w-full py-4 rounded-2xl text-white font-semibold text-sm transition-all active:scale-98 flex items-center justify-center gap-2"
           style={{
             backgroundColor: COLORS.primary,
             boxShadow: '0 4px 16px rgba(38,70,83,0.35)',
           }}
         >
-          🛒 Zutaten zur Einkaufsliste hinzufügen
+          <ShoppingCart size={18} strokeWidth={2} />
+          Zutaten zur Einkaufsliste hinzufügen
         </button>
       </div>
     </div>
@@ -193,13 +202,13 @@ export default function RecipeDetail({
 }
 
 function MacroCard({
-  icon,
+  icon: Icon,
   label,
   value,
   bg,
   color,
 }: {
-  icon: string;
+  icon: LucideIcon;
   label: string;
   value: number;
   bg: string;
@@ -210,7 +219,7 @@ function MacroCard({
       className="rounded-2xl p-3 flex flex-col items-center text-center"
       style={{ backgroundColor: bg }}
     >
-      <span className="text-2xl mb-1">{icon}</span>
+      <Icon size={24} strokeWidth={1.75} color={color} className="mb-1" />
       <span className="text-xl font-bold" style={{ color }}>{value}%</span>
       <span className="text-xs font-medium mt-0.5" style={{ color }}>{label}</span>
     </div>

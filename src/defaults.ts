@@ -5,7 +5,7 @@ export const DEFAULT_RECIPES: Omit<Recipe, 'id' | 'created_at'>[] = [
     name: 'Beeren-Hafer-Bowl',
     category: 'Frühstück',
     time_minutes: 10,
-    emoji: '🥣',
+    emoji: 'soup',
     ingredients: `80g Haferflocken
 200ml Hafermilch oder Mandelmilch
 1 Handvoll gemischte Beeren (frisch oder TK)
@@ -27,7 +27,7 @@ Sofort servieren oder über Nacht im Kühlschrank ziehen lassen.`,
     name: 'Griechischer Quinoa-Salat',
     category: 'Hauptgericht',
     time_minutes: 20,
-    emoji: '🥗',
+    emoji: 'salad',
     ingredients: `200g Quinoa
 400ml Gemüsebrühe
 1 Gurke
@@ -56,7 +56,7 @@ Mindestens 10 Minuten ziehen lassen.`,
     name: 'Lachs mit Ofengemüse',
     category: 'Hauptgericht',
     time_minutes: 30,
-    emoji: '🐟',
+    emoji: 'fish',
     ingredients: `2 Lachsfilets (je ca. 180g)
 2 Paprika (verschiedene Farben)
 2 Zucchini

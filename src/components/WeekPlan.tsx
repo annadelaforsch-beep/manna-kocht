@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import type { MealPlanEntry, Recipe } from '../types';
 import { COLORS, getCategoryTint } from '../theme';
+import { getRecipeIcon } from '../icons';
+import { ShoppingCart, X, ChevronDown, ChevronRight } from 'lucide-react';
 
 interface Props {
   recipes: Recipe[];
@@ -178,7 +180,10 @@ export default function WeekPlan({
                           {recipe.image_url ? (
                             <img src={recipe.image_url} alt="" className="w-full h-full object-cover" />
                           ) : (
-                            <span className="text-lg">{recipe.emoji}</span>
+                            (() => {
+                              const RecipeIcon = getRecipeIcon(recipe.emoji);
+                              return <RecipeIcon size={18} strokeWidth={1.75} color={COLORS.primary} />;
+                            })()
                           )}
                         </div>
                         <span className="text-sm font-medium truncate" style={{ color: COLORS.ink }}>
@@ -187,11 +192,11 @@ export default function WeekPlan({
                       </button>
                       <button
                         onClick={() => onClear(key)}
-                        className="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-full text-sm transition-transform active:scale-90"
+                        className="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-full transition-transform active:scale-90"
                         style={{ color: COLORS.muted }}
                         aria-label="Entfernen"
                       >
-                        ✕
+                        <X size={16} strokeWidth={2} />
                       </button>
                     </>
                   ) : (
@@ -215,10 +220,11 @@ export default function WeekPlan({
         <button
           onClick={handleCreateShoppingList}
           disabled={assignedThisWeek.length === 0}
-          className="w-full py-4 rounded-2xl text-white font-semibold text-sm transition-all active:scale-98 disabled:opacity-40"
+          className="w-full py-4 rounded-2xl text-white font-semibold text-sm transition-all active:scale-98 disabled:opacity-40 flex items-center justify-center gap-2"
           style={{ backgroundColor: COLORS.primary, boxShadow: '0 4px 16px rgba(38,70,83,0.35)' }}
         >
-          🛒 Einkaufsliste für die Woche erstellen
+          <ShoppingCart size={18} strokeWidth={2} />
+          Einkaufsliste für die Woche erstellen
         </button>
 
         {/* Historie */}
@@ -226,10 +232,15 @@ export default function WeekPlan({
           <div className="pt-4">
             <button
               onClick={() => setShowHistory((v) => !v)}
-              className="text-sm font-semibold"
+              className="flex items-center gap-1 text-sm font-semibold"
               style={{ color: COLORS.primary }}
             >
-              {showHistory ? '▾' : '▸'} Frühere Wochen
+              {showHistory ? (
+                <ChevronDown size={16} strokeWidth={2.5} />
+              ) : (
+                <ChevronRight size={16} strokeWidth={2.5} />
+              )}
+              Frühere Wochen
             </button>
             {showHistory && (
               <div className="mt-3 space-y-4">
@@ -260,9 +271,19 @@ export default function WeekPlan({
                               <span className="w-10 flex-shrink-0 text-xs" style={{ color: COLORS.muted }}>
                                 {formatDayLabel(d)}
                               </span>
-                              <span style={{ color: COLORS.ink }}>
-                                {recipe ? `${recipe.emoji} ${recipe.name}` : '(gelöschtes Rezept)'}
-                              </span>
+                              {recipe ? (
+                                (() => {
+                                  const RecipeIcon = getRecipeIcon(recipe.emoji);
+                                  return (
+                                    <span className="flex items-center gap-1.5" style={{ color: COLORS.ink }}>
+                                      <RecipeIcon size={14} strokeWidth={1.75} color={COLORS.muted} />
+                                      {recipe.name}
+                                    </span>
+                                  );
+                                })()
+                              ) : (
+                                <span style={{ color: COLORS.ink }}>(gelöschtes Rezept)</span>
+                              )}
                             </button>
                           );
                         })}
@@ -333,7 +354,10 @@ export default function WeekPlan({
                       {r.image_url ? (
                         <img src={r.image_url} alt="" className="w-full h-full object-cover" />
                       ) : (
-                        <span className="text-lg">{r.emoji}</span>
+                        (() => {
+                          const RecipeIcon = getRecipeIcon(r.emoji);
+                          return <RecipeIcon size={18} strokeWidth={1.75} color={COLORS.primary} />;
+                        })()
                       )}
                     </div>
                     <span className="text-sm font-medium" style={{ color: COLORS.ink }}>
