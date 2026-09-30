@@ -5,7 +5,7 @@ import { extractRecipeFromUrl } from '../extractRecipe';
 import { uploadRecipeImage } from '../uploadImage';
 import { COLORS } from '../theme';
 import { RECIPE_ICONS, getRecipeIcon } from '../icons';
-import { Camera, Link2, Check, Trash2, LeafyGreen, Wheat, Nut, type LucideIcon } from 'lucide-react';
+import { Camera, Link2, Check, Trash2, LeafyGreen, Wheat, Nut, ArrowRight, type LucideIcon } from 'lucide-react';
 
 interface Props {
   editingRecipe: Recipe | null;
@@ -193,10 +193,16 @@ export default function RecipeForm({ editingRecipe, onBack, onSave, onDelete }: 
               <button
                 onClick={handleExtractFromLink}
                 disabled={extracting}
-                className="px-4 py-3 rounded-2xl text-sm font-semibold text-white transition-all active:scale-98 disabled:opacity-60"
+                aria-label="Übernehmen"
+                title="Übernehmen"
+                className="w-12 h-12 flex-shrink-0 rounded-2xl flex items-center justify-center text-white transition-all active:scale-98 disabled:opacity-60"
                 style={{ backgroundColor: COLORS.primary }}
               >
-                {extracting ? '…' : 'Übernehmen'}
+                {extracting ? (
+                  <span className="text-sm">…</span>
+                ) : (
+                  <ArrowRight size={18} strokeWidth={2.5} />
+                )}
               </button>
             </div>
             {extractError && (
