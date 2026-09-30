@@ -9,6 +9,7 @@ import RecipeDetail from './components/RecipeDetail';
 import RecipeForm from './components/RecipeForm';
 import ShoppingList from './components/ShoppingList';
 import WeekPlan from './components/WeekPlan';
+import TabBar, { type TabScreen } from './components/TabBar';
 
 function loadFromStorage<T>(key: string, fallback: T): T {
   try {
@@ -36,9 +37,14 @@ export default function App() {
   const [mealPlanLoading, setMealPlanLoading] = useState(true);
 
   const currentScreen = screenStack[screenStack.length - 1];
+  // Die drei Tabs (Rezepte/Wochenplan/Einkaufsliste) bilden immer die Basis des Stacks;
+  // Detail/Form werden darüber geschoben und blenden die Tab-Leiste dabei aus.
+  const activeTab = screenStack[0] as TabScreen;
+  const showTabBar = screenStack.length === 1;
 
   const pushScreen = (screen: Screen) => setScreenStack((prev) => [...prev, screen]);
   const goBack = () => setScreenStack((prev) => (prev.length > 1 ? prev.slice(0, -1) : prev));
+  const switchTab = (tab: TabScreen) => setScreenStack([tab]);
 
   // Persist favorites
   useEffect(() => {
@@ -115,7 +121,7 @@ export default function App() {
       const unique = newItems.filter((i) => !existingNames.has(i.name.toLowerCase()));
       return [...prev, ...unique];
     });
-    pushScreen('shopping');
+    switchTab('shopping');
   };
 
   const handleAddShoppingItem = (name: string) => {
@@ -226,8 +232,6 @@ export default function App() {
             setEditingRecipe(null);
             pushScreen('form');
           }}
-          onOpenShopping={() => pushScreen('shopping')}
-          onOpenWeekPlan={() => pushScreen('weekplan')}
           onToggleFavorite={handleToggleFavorite}
         />
       )}
@@ -258,7 +262,6 @@ export default function App() {
       {currentScreen === 'shopping' && (
         <ShoppingList
           items={shoppingList}
-          onBack={goBack}
           onToggle={handleToggleShoppingItem}
           onRemove={handleRemoveShoppingItem}
           onAdd={handleAddShoppingItem}
@@ -272,7 +275,6 @@ export default function App() {
           recipes={recipes}
           entries={mealPlanEntries}
           loading={mealPlanLoading}
-          onBack={goBack}
           onAssign={handleAssignMealPlan}
           onClear={handleClearMealPlan}
           onAddWeekToShoppingList={handleAddToShoppingList}
@@ -282,6 +284,8 @@ export default function App() {
           }}
         />
       )}
+
+      {showTabBar && <TabBar active={activeTab} onChange={switchTab} />}
     </div>
   );
 }

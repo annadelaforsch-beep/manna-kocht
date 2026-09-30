@@ -10,8 +10,6 @@ interface Props {
   onSelectRecipe: (id: string) => void;
   onEditRecipe: (recipe: Recipe) => void;
   onAddRecipe: () => void;
-  onOpenShopping: () => void;
-  onOpenWeekPlan: () => void;
   onToggleFavorite: (id: string) => void;
 }
 
@@ -22,8 +20,6 @@ export default function HomeScreen({
   onSelectRecipe,
   onEditRecipe,
   onAddRecipe,
-  onOpenShopping,
-  onOpenWeekPlan,
   onToggleFavorite,
 }: Props) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -143,36 +139,19 @@ export default function HomeScreen({
         )}
       </div>
 
-      {/* FAB area */}
-      <div
-        className="fixed right-5 flex items-center gap-3 z-30"
-        style={{ bottom: 'calc(1.5rem + env(safe-area-inset-bottom))' }}
+      {/* FAB: Rezept hinzufügen (nur auf dem Rezepte-Tab) */}
+      <button
+        onClick={onAddRecipe}
+        className="fixed right-5 w-14 h-14 rounded-full flex items-center justify-center shadow-lg text-white text-3xl font-light transition-transform active:scale-95 z-30"
+        style={{
+          backgroundColor: COLORS.primary,
+          boxShadow: '0 4px 16px rgba(38,70,83,0.4)',
+          bottom: 'calc(84px + env(safe-area-inset-bottom))',
+        }}
+        aria-label="Rezept hinzufügen"
       >
-        <button
-          onClick={onOpenWeekPlan}
-          className="w-12 h-12 rounded-full flex items-center justify-center shadow-lg text-xl transition-transform active:scale-95"
-          style={{ backgroundColor: COLORS.surface, boxShadow: '0 2px 10px rgba(35,40,58,0.15)' }}
-          aria-label="Wochenplan"
-        >
-          📅
-        </button>
-        <button
-          onClick={onOpenShopping}
-          className="w-12 h-12 rounded-full flex items-center justify-center shadow-lg text-xl transition-transform active:scale-95"
-          style={{ backgroundColor: COLORS.surface, boxShadow: '0 2px 10px rgba(35,40,58,0.15)' }}
-          aria-label="Einkaufsliste"
-        >
-          🛒
-        </button>
-        <button
-          onClick={onAddRecipe}
-          className="w-14 h-14 rounded-full flex items-center justify-center shadow-lg text-white text-3xl font-light transition-transform active:scale-95"
-          style={{ backgroundColor: COLORS.primary, boxShadow: '0 4px 16px rgba(38,70,83,0.4)' }}
-          aria-label="Rezept hinzufügen"
-        >
-          +
-        </button>
-      </div>
+        +
+      </button>
     </div>
   );
 }

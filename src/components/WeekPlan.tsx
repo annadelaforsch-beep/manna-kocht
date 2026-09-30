@@ -6,7 +6,6 @@ interface Props {
   recipes: Recipe[];
   entries: MealPlanEntry[];
   loading: boolean;
-  onBack: () => void;
   onAssign: (planDate: string, recipeId: string) => void;
   onClear: (planDate: string) => void;
   onAddWeekToShoppingList: (ingredientLines: string[]) => void;
@@ -40,7 +39,6 @@ export default function WeekPlan({
   recipes,
   entries,
   loading,
-  onBack,
   onAssign,
   onClear,
   onAddWeekToShoppingList,
@@ -119,17 +117,9 @@ export default function WeekPlan({
     <div className="min-h-screen pb-32" style={{ backgroundColor: COLORS.bg }}>
       {/* Header */}
       <div
-        className="sticky top-0 z-10 flex items-center gap-3 px-5 pt-12 pb-4"
+        className="sticky top-0 z-10 px-5 pt-12 pb-4"
         style={{ backgroundColor: COLORS.bg }}
       >
-        <button
-          onClick={onBack}
-          className="w-10 h-10 rounded-full flex items-center justify-center text-xl"
-          style={{ backgroundColor: COLORS.surface, boxShadow: '0 1px 4px rgba(35,40,58,0.1)' }}
-          aria-label="Zurück"
-        >
-          ←
-        </button>
         <h1
           className="text-xl font-bold"
           style={{ color: COLORS.primary, fontFamily: "'Playfair Display', Georgia, serif" }}
@@ -289,7 +279,7 @@ export default function WeekPlan({
       {/* Rezept-Auswahl */}
       {pickerDate && (
         <div
-          className="fixed inset-0 z-30 flex items-end"
+          className="fixed inset-0 z-40 flex items-end"
           style={{ backgroundColor: 'rgba(35,40,58,0.4)' }}
           onClick={() => setPickerDate(null)}
         >

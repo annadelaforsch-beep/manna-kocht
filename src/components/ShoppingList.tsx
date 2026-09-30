@@ -4,7 +4,6 @@ import { COLORS } from '../theme';
 
 interface Props {
   items: ShoppingItem[];
-  onBack: () => void;
   onToggle: (id: string) => void;
   onRemove: (id: string) => void;
   onAdd: (name: string) => void;
@@ -12,7 +11,7 @@ interface Props {
   onClear: () => void;
 }
 
-export default function ShoppingList({ items, onBack, onToggle, onRemove, onAdd, onCheckAll, onClear }: Props) {
+export default function ShoppingList({ items, onToggle, onRemove, onAdd, onCheckAll, onClear }: Props) {
   const [newItem, setNewItem] = useState('');
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
@@ -29,35 +28,25 @@ export default function ShoppingList({ items, onBack, onToggle, onRemove, onAdd,
   const total = items.length;
 
   return (
-    <div className="min-h-screen pb-20" style={{ backgroundColor: COLORS.bg }}>
+    <div className="min-h-screen pb-28" style={{ backgroundColor: COLORS.bg }}>
       {/* Header */}
       <div
         className="sticky top-0 z-10 px-5 pt-12 pb-4"
         style={{ backgroundColor: COLORS.bg }}
       >
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={onBack}
-              className="w-10 h-10 rounded-full flex items-center justify-center text-xl"
-              style={{ backgroundColor: COLORS.surface, boxShadow: '0 1px 4px rgba(35,40,58,0.1)' }}
-              aria-label="Zurück"
+          <div>
+            <h1
+              className="text-xl font-bold"
+              style={{ color: COLORS.primary, fontFamily: "'Playfair Display', Georgia, serif" }}
             >
-              ←
-            </button>
-            <div>
-              <h1
-                className="text-xl font-bold"
-                style={{ color: COLORS.primary, fontFamily: "'Playfair Display', Georgia, serif" }}
-              >
-                Einkaufsliste
-              </h1>
-              {total > 0 && (
-                <p className="text-xs" style={{ color: COLORS.muted }}>
-                  {checkedCount} von {total} erledigt
-                </p>
-              )}
-            </div>
+              Einkaufsliste
+            </h1>
+            {total > 0 && (
+              <p className="text-xs" style={{ color: COLORS.muted }}>
+                {checkedCount} von {total} erledigt
+              </p>
+            )}
           </div>
 
           {/* Progress ring */}
