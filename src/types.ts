@@ -26,6 +26,8 @@ export interface MealPlanEntry {
   id: string;
   plan_date: string; // 'YYYY-MM-DD'
   recipe_id: string;
+  /** 0 = Hauptgericht, 1..MAX_EXTRAS = Extras (Beilage/Nachspeise) */
+  position: number;
   created_at?: string;
 }
 
@@ -47,3 +49,6 @@ export const FILTER_OPTIONS = [
 ] as const;
 
 export type FilterOption = (typeof FILTER_OPTIONS)[number];
+
+/** Maximale Anzahl Extras (Beilage/Nachspeise) zusätzlich zum Hauptgericht pro Tag */
+export const MAX_EXTRAS = 2;

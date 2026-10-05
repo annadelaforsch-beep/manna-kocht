@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { MealPlanEntry, Recipe } from '../types';
+import { MAX_EXTRAS } from '../types';
 import { COLORS, getCategoryTint } from '../theme';
 import { getRecipeIcon } from '../icons';
 import { useVisualViewport } from '../useVisualViewport';
@@ -9,10 +10,10 @@ interface Props {
   recipes: Recipe[];
   entries: MealPlanEntry[];
   loading: boolean;
-  onAssign: (planDate: string, recipeId: string) => void;
-  onClear: (planDate: string) => void;
+  onAssign: (planDate: string, recipeId: string, position: number) => void;
+  onClear: (planDate: string, position: number) => void;
   onAddWeekToShoppingList: (ingredientLines: string[]) => void;
-  onCreateRecipe: (planDate: string, suggestedName: string) => void;
+  onCreateRecipe: (planDate: string, position: number, suggestedName: string) => void;
   onSelectRecipe: (id: string) => void;
 }
 
@@ -50,7 +51,11 @@ export default function WeekPlan({
   onSelectRecipe,
 }: Props) {
   const [pickerDate, setPickerDate] = useState<string | null>(null);
+  // 0 = Hauptgericht, 1.. = Extra (Beilage/Nachspeise)
+  const [pickerPosition, setPickerPosition] = useState(0);
   const [pickerSearch, setPickerSearch] = useState('');
+  // Bei Extras zeigt die Auswahl zuerst nur Beilagen & Süßes; mit "Alle Rezepte" der Rest.
+  const [pickerShowAll, setPickerShowAll] = useState(false);
   // 0 = aktuelle Woche, -1 = letzte Woche, +1 = nächste Woche (weiter in die Zukunft nicht)
   const [weekOffset, setWeekOffset] = useState(0);
   const viewport = useVisualViewport();
@@ -97,9 +102,14 @@ export default function WeekPlan({
           ? 'Letzte Woche'
           : `Vor ${-weekOffset} Wochen`;
 
-  const entryByDate = useMemo(() => {
-    const map = new Map<string, MealPlanEntry>();
-    for (const e of entries) map.set(e.plan_date, e);
+  const entriesByDate = useMemo(() => {
+    const map = new Map<string, MealPlanEntry[]>();
+    for (const e of entries) {
+      const list = map.get(e.plan_date) ?? [];
+      list.push(e);
+      map.set(e.plan_date, list);
+    }
+    for (const list of map.values()) list.sort((a, b) => a.position - b.position);
     return map;
   }, [entries]);
 
@@ -109,9 +119,12 @@ export default function WeekPlan({
     return map;
   }, [recipes]);
 
-  const assignedInWeek = weekDates
-    .map((d) => entryByDate.get(toDateKey(d)))
-    .filter((e): e is MealPlanEntry => Boolean(e));
+  // Alle Einträge der Woche (Hauptgerichte + Extras) für die Einkaufsliste;
+  // Extras ohne Hauptgericht werden nirgends angezeigt und deshalb auch nicht mitgezählt.
+  const assignedInWeek = weekDates.flatMap((d) => {
+    const list = entriesByDate.get(toDateKey(d)) ?? [];
+    return list.some((e) => e.position === 0) ? list : [];
+  });
 
   const handleCreateShoppingList = () => {
     const lines: string[] = [];
@@ -127,9 +140,20 @@ export default function WeekPlan({
     onAddWeekToShoppingList(lines);
   };
 
-  const filteredPickerRecipes = recipes.filter((r) =>
-    r.name.toLowerCase().includes(pickerSearch.toLowerCase())
+  const extraCategories: readonly string[] = ['Kleine Gerichte & Beilagen', 'Süßes'];
+  const onlyExtraCategories = pickerPosition > 0 && !pickerShowAll;
+  const filteredPickerRecipes = recipes.filter(
+    (r) =>
+      r.name.toLowerCase().includes(pickerSearch.toLowerCase()) &&
+      (!onlyExtraCategories || extraCategories.includes(r.category))
   );
+
+  const openPicker = (date: string, position: number) => {
+    setPickerDate(date);
+    setPickerPosition(position);
+    setPickerSearch('');
+    setPickerShowAll(false);
+  };
 
   return (
     <div className="min-h-screen pb-32" style={{ backgroundColor: COLORS.bg }}>
@@ -186,77 +210,133 @@ export default function WeekPlan({
           <div className="space-y-2">
             {weekDates.map((d, i) => {
               const key = toDateKey(d);
-              const entry = entryByDate.get(key);
-              const recipe = entry ? recipeById.get(entry.recipe_id) : undefined;
+              const dayEntries = entriesByDate.get(key) ?? [];
+              const mainEntry = dayEntries.find((e) => e.position === 0);
+              const recipe = mainEntry ? recipeById.get(mainEntry.recipe_id) : undefined;
+              const extras = dayEntries.filter((e) => e.position > 0);
+              const freePosition = Array.from({ length: MAX_EXTRAS }, (_, n) => n + 1).find(
+                (p) => !extras.some((e) => e.position === p)
+              );
               const isToday = key === todayKey;
               return (
                 <div
                   key={key}
-                  className="rounded-2xl p-3 flex items-center gap-3"
+                  className="rounded-2xl p-3"
                   style={{
                     backgroundColor: COLORS.surface,
                     boxShadow: '0 1px 4px rgba(35,40,58,0.08)',
                     border: `2px solid ${isToday ? COLORS.primary : 'transparent'}`,
                   }}
                 >
-                  <div className="w-12 flex-shrink-0 text-center">
-                    <div className="text-xs font-semibold" style={{ color: COLORS.muted }}>
-                      {WEEKDAY_LABELS[i]}
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 flex-shrink-0 text-center">
+                      <div className="text-xs font-semibold" style={{ color: COLORS.muted }}>
+                        {WEEKDAY_LABELS[i]}
+                      </div>
+                      <div className="text-sm font-bold" style={{ color: COLORS.ink }}>
+                        {formatDayLabel(d)}
+                      </div>
                     </div>
-                    <div className="text-sm font-bold" style={{ color: COLORS.ink }}>
-                      {formatDayLabel(d)}
-                    </div>
+
+                    {recipe ? (
+                      <>
+                        <button
+                          onClick={() => onSelectRecipe(recipe.id)}
+                          className="flex-1 flex items-center gap-3 text-left min-w-0"
+                        >
+                          <div
+                            className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0"
+                            style={{ backgroundColor: getCategoryTint(recipe.category) }}
+                          >
+                            {recipe.image_url ? (
+                              <img src={recipe.image_url} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              (() => {
+                                const RecipeIcon = getRecipeIcon(recipe.emoji);
+                                return <RecipeIcon size={18} strokeWidth={1.75} color={COLORS.primary} />;
+                              })()
+                            )}
+                          </div>
+                          <span className="text-sm font-medium truncate" style={{ color: COLORS.ink }}>
+                            {recipe.name}
+                          </span>
+                        </button>
+                        {!isPastWeek && (
+                          <button
+                            onClick={() => onClear(key, 0)}
+                            className="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-full transition-transform active:scale-90"
+                            style={{ color: COLORS.muted }}
+                            aria-label="Entfernen"
+                          >
+                            <X size={16} strokeWidth={2} />
+                          </button>
+                        )}
+                      </>
+                    ) : isPastWeek ? (
+                      <span className="flex-1 text-sm py-2" style={{ color: COLORS.mutedLight }}>
+                        –
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => openPicker(key, 0)}
+                        className="flex-1 text-left text-sm font-medium py-2"
+                        style={{ color: COLORS.muted }}
+                      >
+                        + Rezept wählen
+                      </button>
+                    )}
                   </div>
 
-                  {recipe ? (
-                    <>
-                      <button
-                        onClick={() => onSelectRecipe(recipe.id)}
-                        className="flex-1 flex items-center gap-3 text-left min-w-0"
-                      >
-                        <div
-                          className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0"
-                          style={{ backgroundColor: getCategoryTint(recipe.category) }}
-                        >
-                          {recipe.image_url ? (
-                            <img src={recipe.image_url} alt="" className="w-full h-full object-cover" />
-                          ) : (
-                            (() => {
-                              const RecipeIcon = getRecipeIcon(recipe.emoji);
-                              return <RecipeIcon size={18} strokeWidth={1.75} color={COLORS.primary} />;
-                            })()
-                          )}
-                        </div>
-                        <span className="text-sm font-medium truncate" style={{ color: COLORS.ink }}>
-                          {recipe.name}
-                        </span>
-                      </button>
-                      {!isPastWeek && (
+                  {/* Extras (Beilage / Nachspeise) – nur wenn es ein Hauptgericht gibt */}
+                  {recipe && (extras.length > 0 || (!isPastWeek && freePosition !== undefined)) && (
+                    <div className="flex flex-wrap items-center gap-1.5 mt-2 pl-[60px]">
+                      {extras.map((extra) => {
+                        const extraRecipe = recipeById.get(extra.recipe_id);
+                        const ExtraIcon = extraRecipe ? getRecipeIcon(extraRecipe.emoji) : null;
+                        return (
+                          <span
+                            key={extra.id}
+                            className="inline-flex items-center gap-1 max-w-full rounded-full text-xs font-medium"
+                            style={{
+                              backgroundColor: extraRecipe ? getCategoryTint(extraRecipe.category) : COLORS.mutedLight,
+                              color: COLORS.ink,
+                              paddingLeft: 8,
+                              paddingRight: isPastWeek ? 8 : 2,
+                            }}
+                          >
+                            <button
+                              onClick={() => extraRecipe && onSelectRecipe(extraRecipe.id)}
+                              disabled={!extraRecipe}
+                              className="inline-flex items-center gap-1 min-w-0 py-1"
+                            >
+                              {ExtraIcon && <ExtraIcon size={12} strokeWidth={2} color={COLORS.primary} />}
+                              <span className="truncate">{extraRecipe ? extraRecipe.name : '(gelöschtes Rezept)'}</span>
+                            </button>
+                            {!isPastWeek && (
+                              <button
+                                onClick={() => onClear(key, extra.position)}
+                                className="w-6 h-6 flex-shrink-0 flex items-center justify-center rounded-full"
+                                style={{ color: COLORS.muted }}
+                                aria-label="Extra entfernen"
+                              >
+                                <X size={12} strokeWidth={2} />
+                              </button>
+                            )}
+                          </span>
+                        );
+                      })}
+                      {!isPastWeek && freePosition !== undefined && (
                         <button
-                          onClick={() => onClear(key)}
-                          className="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-full transition-transform active:scale-90"
-                          style={{ color: COLORS.muted }}
-                          aria-label="Entfernen"
+                          onClick={() => openPicker(key, freePosition)}
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium transition-transform active:scale-95"
+                          style={{ backgroundColor: COLORS.bg, color: COLORS.muted }}
+                          aria-label="Beilage oder Nachspeise hinzufügen"
                         >
-                          <X size={16} strokeWidth={2} />
+                          <Plus size={12} strokeWidth={2.5} />
+                          {extras.length === 0 && 'Beilage / Dessert'}
                         </button>
                       )}
-                    </>
-                  ) : isPastWeek ? (
-                    <span className="flex-1 text-sm py-2" style={{ color: COLORS.mutedLight }}>
-                      –
-                    </span>
-                  ) : (
-                    <button
-                      onClick={() => {
-                        setPickerDate(key);
-                        setPickerSearch('');
-                      }}
-                      className="flex-1 text-left text-sm font-medium py-2"
-                      style={{ color: COLORS.muted }}
-                    >
-                      + Rezept wählen
-                    </button>
+                    </div>
                   )}
                 </div>
               );
@@ -306,7 +386,7 @@ export default function WeekPlan({
                   className="text-lg font-bold"
                   style={{ color: COLORS.primary, fontFamily: "'Playfair Display', Georgia, serif" }}
                 >
-                  Rezept wählen
+                  {pickerPosition > 0 ? 'Beilage / Nachspeise wählen' : 'Rezept wählen'}
                 </h2>
                 <button
                   onClick={() => setPickerDate(null)}
@@ -330,6 +410,30 @@ export default function WeekPlan({
                   boxShadow: '0 1px 4px rgba(35,40,58,0.08)',
                 }}
               />
+              {pickerPosition > 0 && (
+                <div className="flex gap-2 mt-3">
+                  {[
+                    { all: false, label: 'Beilagen & Süßes' },
+                    { all: true, label: 'Alle Rezepte' },
+                  ].map((opt) => {
+                    const active = pickerShowAll === opt.all;
+                    return (
+                      <button
+                        key={opt.label}
+                        onClick={() => setPickerShowAll(opt.all)}
+                        className="px-3 py-1.5 rounded-full text-xs font-medium transition-all"
+                        style={{
+                          backgroundColor: active ? COLORS.primary : COLORS.surface,
+                          color: active ? '#fff' : COLORS.ink,
+                          boxShadow: active ? '0 2px 8px rgba(38,70,83,0.3)' : '0 1px 3px rgba(35,40,58,0.08)',
+                        }}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
             <div
               className="min-h-0 flex-1 overflow-y-auto px-5 pb-5 space-y-2"
@@ -346,7 +450,7 @@ export default function WeekPlan({
                       const suggestedName = pickerSearch.trim();
                       setPickerDate(null);
                       setPickerSearch('');
-                      onCreateRecipe(date, suggestedName);
+                      onCreateRecipe(date, pickerPosition, suggestedName);
                     }}
                     className="flex items-center gap-2 px-5 py-3 rounded-2xl text-sm font-semibold text-white transition-all active:scale-98"
                     style={{ backgroundColor: COLORS.primary, boxShadow: '0 2px 8px rgba(38,70,83,0.3)' }}
@@ -360,7 +464,7 @@ export default function WeekPlan({
                   <button
                     key={r.id}
                     onClick={() => {
-                      onAssign(pickerDate, r.id);
+                      onAssign(pickerDate, r.id, pickerPosition);
                       setPickerDate(null);
                     }}
                     className="w-full flex items-center gap-3 p-2 rounded-2xl text-left transition-all active:scale-98"
