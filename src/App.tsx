@@ -26,6 +26,10 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
+  // Wenn ein Rezept direkt aus der Wochenplanung heraus angelegt wird, merken wir uns
+  // den Tag (und einen vorgeschlagenen Namen), um es nach dem Speichern dort einzuplanen.
+  const [pendingPlanDate, setPendingPlanDate] = useState<string | null>(null);
+  const [initialRecipeName, setInitialRecipeName] = useState('');
 
   const [favorites, setFavorites] = useState<string[]>(() =>
     loadFromStorage<string[]>('mk_favorites', [])
@@ -185,6 +189,7 @@ export default function App() {
       try {
         const created = await insertRecipe(data);
         setRecipes((prev) => [created, ...prev]);
+        if (pendingPlanDate) handleAssignMealPlan(pendingPlanDate, created.id);
       } catch {
         const tempRecipe: Recipe = {
           ...data,
@@ -192,10 +197,27 @@ export default function App() {
           created_at: new Date().toISOString(),
         };
         setRecipes((prev) => [tempRecipe, ...prev]);
+        if (pendingPlanDate) handleAssignMealPlan(pendingPlanDate, tempRecipe.id);
       }
     }
+    setPendingPlanDate(null);
+    setInitialRecipeName('');
     goBack();
   };
+
+  const handleCancelForm = () => {
+    setPendingPlanDate(null);
+    setInitialRecipeName('');
+    goBack();
+  };
+
+  const planHint = pendingPlanDate
+    ? new Date(`${pendingPlanDate}T00:00:00`).toLocaleDateString('de-DE', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'numeric',
+      })
+    : null;
 
   const handleDeleteRecipe = async () => {
     if (!editingRecipe) return;
@@ -230,6 +252,8 @@ export default function App() {
           }}
           onAddRecipe={() => {
             setEditingRecipe(null);
+            setPendingPlanDate(null);
+            setInitialRecipeName('');
             pushScreen('form');
           }}
           onToggleFavorite={handleToggleFavorite}
@@ -253,7 +277,9 @@ export default function App() {
       {currentScreen === 'form' && (
         <RecipeForm
           editingRecipe={editingRecipe}
-          onBack={goBack}
+          initialName={initialRecipeName}
+          planHint={planHint}
+          onBack={handleCancelForm}
           onSave={handleSaveRecipe}
           onDelete={handleDeleteRecipe}
         />
@@ -278,6 +304,12 @@ export default function App() {
           onAssign={handleAssignMealPlan}
           onClear={handleClearMealPlan}
           onAddWeekToShoppingList={handleAddToShoppingList}
+          onCreateRecipe={(planDate, suggestedName) => {
+            setEditingRecipe(null);
+            setPendingPlanDate(planDate);
+            setInitialRecipeName(suggestedName);
+            pushScreen('form');
+          }}
           onSelectRecipe={(id) => {
             setSelectedRecipeId(id);
             pushScreen('detail');

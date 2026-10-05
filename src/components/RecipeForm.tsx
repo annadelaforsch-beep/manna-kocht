@@ -9,13 +9,16 @@ import { Camera, Link2, Check, Trash2, LeafyGreen, Wheat, Nut, ArrowRight, type 
 
 interface Props {
   editingRecipe: Recipe | null;
+  initialName?: string;
+  /** z.B. "Dienstag, 6.10." – zeigt an, dass das Rezept nach dem Speichern eingeplant wird */
+  planHint?: string | null;
   onBack: () => void;
   onSave: (data: Omit<Recipe, 'id' | 'created_at'>) => Promise<void>;
   onDelete: () => Promise<void>;
 }
 
-export default function RecipeForm({ editingRecipe, onBack, onSave, onDelete }: Props) {
-  const [name, setName] = useState(editingRecipe?.name ?? '');
+export default function RecipeForm({ editingRecipe, initialName, planHint, onBack, onSave, onDelete }: Props) {
+  const [name, setName] = useState(editingRecipe?.name ?? initialName ?? '');
   const [category, setCategory] = useState(editingRecipe?.category ?? CATEGORIES[0]);
   const [timeMinutes, setTimeMinutes] = useState(editingRecipe?.time_minutes ?? 20);
   const [icon, setIcon] = useState(editingRecipe?.emoji ?? 'utensils');
@@ -168,6 +171,15 @@ export default function RecipeForm({ editingRecipe, onBack, onSave, onDelete }: 
             {errors.map((e, i) => (
               <p key={i} className="text-sm" style={{ color: COLORS.danger }}>• {e}</p>
             ))}
+          </div>
+        )}
+
+        {planHint && !editingRecipe && (
+          <div
+            className="rounded-2xl px-4 py-3 text-sm font-medium"
+            style={{ backgroundColor: COLORS.primaryLight, color: COLORS.primary }}
+          >
+            Wird nach dem Speichern für {planHint} eingeplant.
           </div>
         )}
 
@@ -490,7 +502,7 @@ export default function RecipeForm({ editingRecipe, onBack, onSave, onDelete }: 
           ) : (
             <>
               <Check size={18} strokeWidth={2.5} />
-              {editingRecipe ? 'Änderungen speichern' : 'Rezept erstellen'}
+              {editingRecipe ? 'Änderungen speichern' : planHint ? 'Erstellen & einplanen' : 'Rezept erstellen'}
             </>
           )}
         </button>

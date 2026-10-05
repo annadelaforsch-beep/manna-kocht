@@ -3,7 +3,7 @@ import type { MealPlanEntry, Recipe } from '../types';
 import { COLORS, getCategoryTint } from '../theme';
 import { getRecipeIcon } from '../icons';
 import { useVisualViewport } from '../useVisualViewport';
-import { ShoppingCart, X, ChevronDown, ChevronRight } from 'lucide-react';
+import { ShoppingCart, X, ChevronDown, ChevronRight, Plus } from 'lucide-react';
 
 interface Props {
   recipes: Recipe[];
@@ -12,6 +12,7 @@ interface Props {
   onAssign: (planDate: string, recipeId: string) => void;
   onClear: (planDate: string) => void;
   onAddWeekToShoppingList: (ingredientLines: string[]) => void;
+  onCreateRecipe: (planDate: string, suggestedName: string) => void;
   onSelectRecipe: (id: string) => void;
 }
 
@@ -45,6 +46,7 @@ export default function WeekPlan({
   onAssign,
   onClear,
   onAddWeekToShoppingList,
+  onCreateRecipe,
   onSelectRecipe,
 }: Props) {
   const [pickerDate, setPickerDate] = useState<string | null>(null);
@@ -357,9 +359,25 @@ export default function WeekPlan({
               style={{ overscrollBehavior: 'contain' }}
             >
               {filteredPickerRecipes.length === 0 ? (
-                <p className="text-sm text-center py-8" style={{ color: COLORS.muted }}>
-                  Kein Rezept gefunden
-                </p>
+                <div className="flex flex-col items-center gap-3 py-6">
+                  <p className="text-sm text-center" style={{ color: COLORS.muted }}>
+                    Kein Rezept gefunden
+                  </p>
+                  <button
+                    onClick={() => {
+                      const date = pickerDate;
+                      const suggestedName = pickerSearch.trim();
+                      setPickerDate(null);
+                      setPickerSearch('');
+                      onCreateRecipe(date, suggestedName);
+                    }}
+                    className="flex items-center gap-2 px-5 py-3 rounded-2xl text-sm font-semibold text-white transition-all active:scale-98"
+                    style={{ backgroundColor: COLORS.primary, boxShadow: '0 2px 8px rgba(38,70,83,0.3)' }}
+                  >
+                    <Plus size={18} strokeWidth={2.5} />
+                    Rezept hinzufügen
+                  </button>
+                </div>
               ) : (
                 filteredPickerRecipes.map((r) => (
                   <button
