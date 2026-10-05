@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import type { MealPlanEntry, Recipe } from '../types';
 import { COLORS, getCategoryTint } from '../theme';
 import { getRecipeIcon } from '../icons';
+import { useVisualViewport } from '../useVisualViewport';
 import { ShoppingCart, X, ChevronDown, ChevronRight } from 'lucide-react';
 
 interface Props {
@@ -49,6 +50,7 @@ export default function WeekPlan({
   const [pickerDate, setPickerDate] = useState<string | null>(null);
   const [pickerSearch, setPickerSearch] = useState('');
   const [showHistory, setShowHistory] = useState(false);
+  const viewport = useVisualViewport();
 
   const todayKey = toDateKey(new Date());
   const weekStart = useMemo(() => getWeekStart(new Date()), []);
@@ -299,24 +301,43 @@ export default function WeekPlan({
 
       {/* Rezept-Auswahl */}
       {pickerDate && (
+        // Oben verankert und exakt an den sichtbaren Bereich (ohne Tastatur) angepasst,
+        // damit Suchfeld + Ergebnisse nie hinter der Handy-Tastatur verschwinden.
         <div
-          className="fixed inset-0 z-40 flex items-end"
-          style={{ backgroundColor: 'rgba(35,40,58,0.4)' }}
+          className="fixed left-0 right-0 z-40 flex items-start"
+          style={{
+            top: viewport.offsetTop,
+            height: viewport.height,
+            backgroundColor: 'rgba(35,40,58,0.4)',
+          }}
           onClick={() => setPickerDate(null)}
         >
           <div
-            className="w-full max-w-lg mx-auto rounded-t-3xl flex flex-col"
-            style={{ backgroundColor: COLORS.bg, maxHeight: '75vh' }}
+            className="w-full max-w-lg mx-auto rounded-b-3xl flex flex-col"
+            style={{
+              backgroundColor: COLORS.bg,
+              maxHeight: '100%',
+              paddingTop: 'env(safe-area-inset-top)',
+            }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-5 pb-3">
-              <div className="w-10 h-1 rounded-full mx-auto mb-4" style={{ backgroundColor: COLORS.mutedLight }} />
-              <h2
-                className="text-lg font-bold mb-3"
-                style={{ color: COLORS.primary, fontFamily: "'Playfair Display', Georgia, serif" }}
-              >
-                Rezept wählen
-              </h2>
+              <div className="flex items-center justify-between mb-3">
+                <h2
+                  className="text-lg font-bold"
+                  style={{ color: COLORS.primary, fontFamily: "'Playfair Display', Georgia, serif" }}
+                >
+                  Rezept wählen
+                </h2>
+                <button
+                  onClick={() => setPickerDate(null)}
+                  className="w-9 h-9 rounded-full flex items-center justify-center transition-transform active:scale-90"
+                  style={{ backgroundColor: COLORS.surface, boxShadow: '0 1px 4px rgba(35,40,58,0.1)' }}
+                  aria-label="Schließen"
+                >
+                  <X size={18} strokeWidth={2} color={COLORS.ink} />
+                </button>
+              </div>
               <input
                 type="text"
                 autoFocus
@@ -331,7 +352,10 @@ export default function WeekPlan({
                 }}
               />
             </div>
-            <div className="flex-1 overflow-y-auto px-5 pb-6 space-y-2">
+            <div
+              className="min-h-0 flex-1 overflow-y-auto px-5 pb-5 space-y-2"
+              style={{ overscrollBehavior: 'contain' }}
+            >
               {filteredPickerRecipes.length === 0 ? (
                 <p className="text-sm text-center py-8" style={{ color: COLORS.muted }}>
                   Kein Rezept gefunden
