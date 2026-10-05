@@ -29,6 +29,7 @@ export default function App() {
   // Wenn ein Rezept direkt aus der Wochenplanung heraus angelegt wird, merken wir uns
   // den Tag (und einen vorgeschlagenen Namen), um es nach dem Speichern dort einzuplanen.
   const [pendingPlanDate, setPendingPlanDate] = useState<string | null>(null);
+  const [pendingPlanPosition, setPendingPlanPosition] = useState(0);
   const [initialRecipeName, setInitialRecipeName] = useState('');
 
   const [favorites, setFavorites] = useState<string[]>(() =>
@@ -152,21 +153,30 @@ export default function App() {
   };
 
   // --- Wochenplan handlers ---
-  const handleAssignMealPlan = async (planDate: string, recipeId: string) => {
-    const optimistic: MealPlanEntry = { id: `local-${planDate}`, plan_date: planDate, recipe_id: recipeId };
-    setMealPlanEntries((prev) => [...prev.filter((e) => e.plan_date !== planDate), optimistic]);
+  const handleAssignMealPlan = async (planDate: string, recipeId: string, position = 0) => {
+    const optimistic: MealPlanEntry = {
+      id: `local-${planDate}-${position}`,
+      plan_date: planDate,
+      recipe_id: recipeId,
+      position,
+    };
+    const isSlot = (e: MealPlanEntry) => e.plan_date === planDate && e.position === position;
+    setMealPlanEntries((prev) => [...prev.filter((e) => !isSlot(e)), optimistic]);
     try {
-      const saved = await setMealPlanEntry(planDate, recipeId);
-      setMealPlanEntries((prev) => prev.map((e) => (e.plan_date === planDate ? saved : e)));
+      const saved = await setMealPlanEntry(planDate, recipeId, position);
+      setMealPlanEntries((prev) => prev.map((e) => (isSlot(e) ? saved : e)));
     } catch {
       // Optimistisches Update bleibt bestehen, auch wenn Supabase nicht erreichbar ist
     }
   };
 
-  const handleClearMealPlan = async (planDate: string) => {
-    setMealPlanEntries((prev) => prev.filter((e) => e.plan_date !== planDate));
+  // Hauptgericht (position 0) entfernen = ganzen Tag leeren, da Extras immer zu einem Hauptgericht gehören.
+  const handleClearMealPlan = async (planDate: string, position = 0) => {
+    setMealPlanEntries((prev) =>
+      prev.filter((e) => !(e.plan_date === planDate && (position === 0 || e.position === position)))
+    );
     try {
-      await clearMealPlanEntry(planDate);
+      await clearMealPlanEntry(planDate, position === 0 ? undefined : position);
     } catch {
       // lokal ist der Eintrag bereits entfernt
     }
@@ -187,7 +197,7 @@ export default function App() {
       try {
         const created = await insertRecipe(data);
         setRecipes((prev) => [created, ...prev]);
-        if (pendingPlanDate) handleAssignMealPlan(pendingPlanDate, created.id);
+        if (pendingPlanDate) handleAssignMealPlan(pendingPlanDate, created.id, pendingPlanPosition);
       } catch {
         const tempRecipe: Recipe = {
           ...data,
@@ -195,16 +205,18 @@ export default function App() {
           created_at: new Date().toISOString(),
         };
         setRecipes((prev) => [tempRecipe, ...prev]);
-        if (pendingPlanDate) handleAssignMealPlan(pendingPlanDate, tempRecipe.id);
+        if (pendingPlanDate) handleAssignMealPlan(pendingPlanDate, tempRecipe.id, pendingPlanPosition);
       }
     }
     setPendingPlanDate(null);
+    setPendingPlanPosition(0);
     setInitialRecipeName('');
     goBack();
   };
 
   const handleCancelForm = () => {
     setPendingPlanDate(null);
+    setPendingPlanPosition(0);
     setInitialRecipeName('');
     goBack();
   };
@@ -214,7 +226,7 @@ export default function App() {
         weekday: 'long',
         day: 'numeric',
         month: 'numeric',
-      })
+      }) + (pendingPlanPosition > 0 ? ' (als Extra)' : '')
     : null;
 
   const handleDeleteRecipe = async () => {
@@ -302,9 +314,10 @@ export default function App() {
           onAssign={handleAssignMealPlan}
           onClear={handleClearMealPlan}
           onAddWeekToShoppingList={handleAddToShoppingList}
-          onCreateRecipe={(planDate, suggestedName) => {
+          onCreateRecipe={(planDate, position, suggestedName) => {
             setEditingRecipe(null);
             setPendingPlanDate(planDate);
+            setPendingPlanPosition(position);
             setInitialRecipeName(suggestedName);
             pushScreen('form');
           }}

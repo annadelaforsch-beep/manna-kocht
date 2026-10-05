@@ -17,12 +17,20 @@ export async function fetchMealPlan(sinceDate: string): Promise<MealPlanEntry[]>
 }
 
 /**
- * Setzt (oder überschreibt) das Rezept für einen bestimmten Tag.
+ * Setzt (oder überschreibt) das Rezept für einen Tag und eine Position
+ * (0 = Hauptgericht, 1.. = Extras wie Beilage/Nachspeise).
  */
-export async function setMealPlanEntry(planDate: string, recipeId: string): Promise<MealPlanEntry> {
+export async function setMealPlanEntry(
+  planDate: string,
+  recipeId: string,
+  position = 0
+): Promise<MealPlanEntry> {
   const { data, error } = await supabase
     .from('meal_plan')
-    .upsert({ plan_date: planDate, recipe_id: recipeId }, { onConflict: 'plan_date' })
+    .upsert(
+      { plan_date: planDate, recipe_id: recipeId, position },
+      { onConflict: 'plan_date,position' }
+    )
     .select()
     .single();
 
@@ -31,9 +39,12 @@ export async function setMealPlanEntry(planDate: string, recipeId: string): Prom
 }
 
 /**
- * Entfernt den Eintrag für einen bestimmten Tag wieder.
+ * Entfernt einen Eintrag. Ohne `position` wird der ganze Tag geleert
+ * (Hauptgericht + Extras), mit `position` nur dieser eine Eintrag.
  */
-export async function clearMealPlanEntry(planDate: string): Promise<void> {
-  const { error } = await supabase.from('meal_plan').delete().eq('plan_date', planDate);
+export async function clearMealPlanEntry(planDate: string, position?: number): Promise<void> {
+  let query = supabase.from('meal_plan').delete().eq('plan_date', planDate);
+  if (position !== undefined) query = query.eq('position', position);
+  const { error } = await query;
   if (error) throw error;
 }
