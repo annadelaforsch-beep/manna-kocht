@@ -2,15 +2,15 @@ import { supabase } from './supabase';
 import type { MealPlanEntry } from './types';
 
 /**
- * Lädt alle Wochenplan-Einträge ab einem bestimmten Datum (inkl.), aufsteigend
- * sortiert. Wird sowohl für die aktuelle Woche als auch für die Historie genutzt.
+ * Lädt alle Wochenplan-Einträge ab einem bestimmten Datum (inkl.), absteigend
+ * sortiert (neueste zuerst, damit bei sehr langer Historie nie die aktuellen Einträge abgeschnitten werden). Wird sowohl für die aktuelle Woche als auch für die Historie genutzt.
  */
 export async function fetchMealPlan(sinceDate: string): Promise<MealPlanEntry[]> {
   const { data, error } = await supabase
     .from('meal_plan')
     .select('*')
     .gte('plan_date', sinceDate)
-    .order('plan_date', { ascending: true });
+    .order('plan_date', { ascending: false });
 
   if (error) throw error;
   return (data ?? []) as MealPlanEntry[];

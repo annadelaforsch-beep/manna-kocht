@@ -86,14 +86,12 @@ export default function App() {
     loadRecipes();
   }, [loadRecipes]);
 
-  // Wochenplan laden (aktuelle Woche + Historie der letzten ~8 Wochen)
+  // Wochenplan laden (komplette Historie – pro Tag nur ein kleiner Eintrag)
   const loadMealPlan = useCallback(async () => {
     setMealPlanLoading(true);
     try {
-      const since = new Date();
-      since.setDate(since.getDate() - 56);
-      const sinceKey = since.toISOString().slice(0, 10);
-      const data = await fetchMealPlan(sinceKey);
+      // Gesamte Historie laden, damit man in alle vergangenen Wochen zurückblättern kann
+      const data = await fetchMealPlan('1970-01-01');
       setMealPlanEntries(data);
     } catch {
       setMealPlanEntries([]);

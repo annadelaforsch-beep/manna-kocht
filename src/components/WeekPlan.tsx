@@ -3,7 +3,7 @@ import type { MealPlanEntry, Recipe } from '../types';
 import { COLORS, getCategoryTint } from '../theme';
 import { getRecipeIcon } from '../icons';
 import { useVisualViewport } from '../useVisualViewport';
-import { ShoppingCart, X, ChevronDown, ChevronRight, Plus } from 'lucide-react';
+import { ShoppingCart, X, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 
 interface Props {
   recipes: Recipe[];
@@ -51,11 +51,19 @@ export default function WeekPlan({
 }: Props) {
   const [pickerDate, setPickerDate] = useState<string | null>(null);
   const [pickerSearch, setPickerSearch] = useState('');
-  const [showHistory, setShowHistory] = useState(false);
+  // 0 = aktuelle Woche, -1 = letzte Woche, +1 = nächste Woche (weiter in die Zukunft nicht)
+  const [weekOffset, setWeekOffset] = useState(0);
   const viewport = useVisualViewport();
 
   const todayKey = toDateKey(new Date());
-  const weekStart = useMemo(() => getWeekStart(new Date()), []);
+  const currentWeekStart = useMemo(() => getWeekStart(new Date()), []);
+  const currentWeekStartKey = toDateKey(currentWeekStart);
+
+  const weekStart = useMemo(() => {
+    const d = new Date(currentWeekStart);
+    d.setDate(currentWeekStart.getDate() + weekOffset * 7);
+    return d;
+  }, [currentWeekStart, weekOffset]);
   const weekDates = useMemo(
     () =>
       Array.from({ length: 7 }, (_, i) => {
@@ -65,7 +73,29 @@ export default function WeekPlan({
       }),
     [weekStart]
   );
-  const weekStartKey = toDateKey(weekStart);
+
+  // Vergangene Wochen sind nur lesbar; geplant wird in der aktuellen und der nächsten Woche.
+  const isPastWeek = weekOffset < 0;
+  const MAX_OFFSET = 1;
+
+  // Wie weit man zurückblättern kann: bis zur Woche des ältesten Eintrags.
+  const minOffset = useMemo(() => {
+    let earliest: string | null = null;
+    for (const e of entries) if (!earliest || e.plan_date < earliest) earliest = e.plan_date;
+    if (!earliest || earliest >= currentWeekStartKey) return 0;
+    const earliestWeekStart = getWeekStart(new Date(`${earliest}T00:00:00`));
+    const diffDays = Math.round((currentWeekStart.getTime() - earliestWeekStart.getTime()) / 86400000);
+    return -Math.round(diffDays / 7);
+  }, [entries, currentWeekStart, currentWeekStartKey]);
+
+  const weekLabel =
+    weekOffset === 0
+      ? 'Diese Woche'
+      : weekOffset === 1
+        ? 'Nächste Woche'
+        : weekOffset === -1
+          ? 'Letzte Woche'
+          : `Vor ${-weekOffset} Wochen`;
 
   const entryByDate = useMemo(() => {
     const map = new Map<string, MealPlanEntry>();
@@ -79,31 +109,13 @@ export default function WeekPlan({
     return map;
   }, [recipes]);
 
-  // Vergangene Einträge nach Wochen gruppieren (jede Gruppe beginnt an einem Samstag)
-  const pastWeeks = useMemo(() => {
-    const groups = new Map<string, MealPlanEntry[]>();
-    for (const e of entries) {
-      if (e.plan_date >= weekStartKey) continue;
-      const d = new Date(`${e.plan_date}T00:00:00`);
-      const groupKey = toDateKey(getWeekStart(d));
-      if (!groups.has(groupKey)) groups.set(groupKey, []);
-      groups.get(groupKey)!.push(e);
-    }
-    return Array.from(groups.entries())
-      .sort((a, b) => (a[0] < b[0] ? 1 : -1)) // neueste Woche zuerst
-      .map(([groupKey, weekEntries]) => ({
-        weekStartKey: groupKey,
-        entries: weekEntries.sort((a, b) => (a.plan_date < b.plan_date ? -1 : 1)),
-      }));
-  }, [entries, weekStartKey]);
-
-  const assignedThisWeek = weekDates
+  const assignedInWeek = weekDates
     .map((d) => entryByDate.get(toDateKey(d)))
     .filter((e): e is MealPlanEntry => Boolean(e));
 
   const handleCreateShoppingList = () => {
     const lines: string[] = [];
-    for (const entry of assignedThisWeek) {
+    for (const entry of assignedInWeek) {
       const recipe = recipeById.get(entry.recipe_id);
       if (!recipe) continue;
       const ingredientLines = recipe.ingredients
@@ -135,9 +147,34 @@ export default function WeekPlan({
       </div>
 
       <div className="px-5 space-y-3">
-        <p className="text-sm" style={{ color: COLORS.muted }}>
-          {formatDayLabel(weekDates[0])} – {formatDayLabel(weekDates[6])}
-        </p>
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => setWeekOffset((o) => Math.max(minOffset, o - 1))}
+            disabled={weekOffset <= minOffset}
+            className="w-10 h-10 rounded-full flex items-center justify-center transition-transform active:scale-90 disabled:opacity-30"
+            style={{ backgroundColor: COLORS.surface, boxShadow: '0 1px 4px rgba(35,40,58,0.1)' }}
+            aria-label="Vorherige Woche"
+          >
+            <ChevronLeft size={20} strokeWidth={2} color={COLORS.ink} />
+          </button>
+          <div className="text-center">
+            <p className="text-sm font-bold" style={{ color: COLORS.ink }}>
+              {formatDayLabel(weekDates[0])} – {formatDayLabel(weekDates[6])}
+            </p>
+            <p className="text-xs" style={{ color: COLORS.muted }}>
+              {weekLabel}
+            </p>
+          </div>
+          <button
+            onClick={() => setWeekOffset((o) => Math.min(MAX_OFFSET, o + 1))}
+            disabled={weekOffset >= MAX_OFFSET}
+            className="w-10 h-10 rounded-full flex items-center justify-center transition-transform active:scale-90 disabled:opacity-30"
+            style={{ backgroundColor: COLORS.surface, boxShadow: '0 1px 4px rgba(35,40,58,0.1)' }}
+            aria-label="Nächste Woche"
+          >
+            <ChevronRight size={20} strokeWidth={2} color={COLORS.ink} />
+          </button>
+        </div>
 
         {loading ? (
           <div className="flex flex-col gap-2">
@@ -194,15 +231,21 @@ export default function WeekPlan({
                           {recipe.name}
                         </span>
                       </button>
-                      <button
-                        onClick={() => onClear(key)}
-                        className="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-full transition-transform active:scale-90"
-                        style={{ color: COLORS.muted }}
-                        aria-label="Entfernen"
-                      >
-                        <X size={16} strokeWidth={2} />
-                      </button>
+                      {!isPastWeek && (
+                        <button
+                          onClick={() => onClear(key)}
+                          className="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-full transition-transform active:scale-90"
+                          style={{ color: COLORS.muted }}
+                          aria-label="Entfernen"
+                        >
+                          <X size={16} strokeWidth={2} />
+                        </button>
+                      )}
                     </>
+                  ) : isPastWeek ? (
+                    <span className="flex-1 text-sm py-2" style={{ color: COLORS.mutedLight }}>
+                      –
+                    </span>
                   ) : (
                     <button
                       onClick={() => {
@@ -221,84 +264,18 @@ export default function WeekPlan({
           </div>
         )}
 
+        {!isPastWeek && (
         <button
           onClick={handleCreateShoppingList}
-          disabled={assignedThisWeek.length === 0}
+          disabled={assignedInWeek.length === 0}
           className="w-full py-4 rounded-2xl text-white font-semibold text-sm transition-all active:scale-98 disabled:opacity-40 flex items-center justify-center gap-2"
           style={{ backgroundColor: COLORS.primary, boxShadow: '0 4px 16px rgba(38,70,83,0.35)' }}
         >
           <ShoppingCart size={18} strokeWidth={2} />
           Einkaufsliste für die Woche erstellen
         </button>
-
-        {/* Historie */}
-        {pastWeeks.length > 0 && (
-          <div className="pt-4">
-            <button
-              onClick={() => setShowHistory((v) => !v)}
-              className="flex items-center gap-1 text-sm font-semibold"
-              style={{ color: COLORS.primary }}
-            >
-              {showHistory ? (
-                <ChevronDown size={16} strokeWidth={2.5} />
-              ) : (
-                <ChevronRight size={16} strokeWidth={2.5} />
-              )}
-              Frühere Wochen
-            </button>
-            {showHistory && (
-              <div className="mt-3 space-y-4">
-                {pastWeeks.map(({ weekStartKey: ws, entries: weekEntries }) => {
-                  const start = new Date(`${ws}T00:00:00`);
-                  const end = new Date(start);
-                  end.setDate(start.getDate() + 6);
-                  return (
-                    <div
-                      key={ws}
-                      className="rounded-2xl p-4"
-                      style={{ backgroundColor: COLORS.surface, boxShadow: '0 1px 4px rgba(35,40,58,0.08)' }}
-                    >
-                      <p className="text-xs font-semibold mb-2" style={{ color: COLORS.muted }}>
-                        {formatDayLabel(start)} – {formatDayLabel(end)}
-                      </p>
-                      <div className="space-y-1.5">
-                        {weekEntries.map((e) => {
-                          const recipe = recipeById.get(e.recipe_id);
-                          const d = new Date(`${e.plan_date}T00:00:00`);
-                          return (
-                            <button
-                              key={e.id}
-                              onClick={() => recipe && onSelectRecipe(recipe.id)}
-                              disabled={!recipe}
-                              className="w-full flex items-center gap-2 text-left text-sm"
-                            >
-                              <span className="w-10 flex-shrink-0 text-xs" style={{ color: COLORS.muted }}>
-                                {formatDayLabel(d)}
-                              </span>
-                              {recipe ? (
-                                (() => {
-                                  const RecipeIcon = getRecipeIcon(recipe.emoji);
-                                  return (
-                                    <span className="flex items-center gap-1.5" style={{ color: COLORS.ink }}>
-                                      <RecipeIcon size={14} strokeWidth={1.75} color={COLORS.muted} />
-                                      {recipe.name}
-                                    </span>
-                                  );
-                                })()
-                              ) : (
-                                <span style={{ color: COLORS.ink }}>(gelöschtes Rezept)</span>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
         )}
+
       </div>
 
       {/* Rezept-Auswahl */}
