@@ -401,7 +401,10 @@ export default function RecipeForm({ editingRecipe, initialName, planHint, onBac
         </FormSection>
 
         {/* Ingredients */}
-        <FormSection title="Zutaten * (eine pro Zeile)">
+        <FormSection
+          title="Zutaten * (eine pro Zeile)"
+          hint="Abschnitte mit einer Zeile wie „## Teig“ beginnen, z. B. Teig, Sauce, Belag."
+        >
           <textarea
             value={ingredients}
             onChange={(e) => setIngredients(e.target.value)}
@@ -418,7 +421,10 @@ export default function RecipeForm({ editingRecipe, initialName, planHint, onBac
         </FormSection>
 
         {/* Instructions */}
-        <FormSection title="Zubereitung * (ein Schritt pro Zeile)">
+        <FormSection
+          title="Zubereitung * (ein Schritt pro Zeile)"
+          hint="Optional dieselben Abschnitte mit „## Teig“ usw. – die Nummerierung läuft durch."
+        >
           <textarea
             value={instructions}
             onChange={(e) => setInstructions(e.target.value)}
@@ -550,12 +556,25 @@ export default function RecipeForm({ editingRecipe, initialName, planHint, onBac
   );
 }
 
-function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
+function FormSection({
+  title,
+  hint,
+  children,
+}: {
+  title: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
   return (
     <div>
       <label className="block text-sm font-semibold mb-2" style={{ color: COLORS.ink }}>
         {title}
       </label>
+      {hint && (
+        <p className="text-xs -mt-1 mb-2" style={{ color: COLORS.muted }}>
+          {hint}
+        </p>
+      )}
       {children}
     </div>
   );

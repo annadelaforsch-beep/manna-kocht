@@ -192,9 +192,11 @@ Antworte AUSSCHLIESSLICH mit einem einzigen JSON-Objekt (keine Erklärung, kein 
   "time_minutes": Zahl (geschätzte Gesamtzeit in Minuten - falls nicht angegeben, realistisch schätzen),
   "emoji": "einer von genau diesen Icon-Schlüsseln (exakt so schreiben, ohne Anführungszeichen im Wert selbst): ${RECIPE_ICONS.join(', ')}",
   "ingredients": "Zutaten als Text, eine Zutat pro Zeile (mit \\n getrennt), inkl. Mengenangaben",
-  "instructions": "Zubereitungsschritte als Text, ein Schritt pro Zeile (mit \\n getrennt)",
+  "instructions": "Zubereitungsschritte als Text, ein Schritt pro Zeile (mit \\n getrennt), ohne Nummerierung",
   "tip": "ein kurzer hilfreicher Tipp aus dem Originaltext, falls vorhanden - sonst null"
 }
+
+Abschnitte: Besteht das Rezept aus klar getrennten Bestandteilen (z.B. Teig, Sauce, Belag, Dressing, Füllung), gliedere sowohl "ingredients" als auch "instructions" mit Überschrift-Zeilen im Format "## Name" (eine eigene Zeile, z.B. "## Teig"). Verwende in beiden Feldern dieselben Abschnittsnamen in derselben Reihenfolge und gib jeder Zutat bzw. jedem Schritt den passenden Abschnitt. Hat das Rezept nur einen Bestandteil oder die Quelle gliedert nicht, verwende KEINE Überschriften. Erfinde keine Abschnitte, die nicht im Originaltext erkennbar sind.
 
 Falls auf der Seite kein erkennbares Kochrezept vorhanden ist, antworte ausschließlich mit: {"error": "kein Rezept gefunden"}`;
 }

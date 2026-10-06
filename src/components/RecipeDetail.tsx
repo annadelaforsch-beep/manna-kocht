@@ -1,7 +1,10 @@
+import { useState } from 'react';
 import type { Recipe } from '../types';
 import { COLORS, getCategoryTint } from '../theme';
 import { getRecipeIcon } from '../icons';
-import { Heart, Pencil, Clock, LeafyGreen, Wheat, Nut, Lightbulb, ShoppingCart, type LucideIcon } from 'lucide-react';
+import { parseSections } from '../recipeText';
+import { splitAmountAndName } from '../ingredients';
+import { Heart, Pencil, Clock, Lightbulb, ShoppingCart, ArrowUpRight, ArrowLeft, X } from 'lucide-react';
 
 interface Props {
   recipe: Recipe;
@@ -12,6 +15,10 @@ interface Props {
   onAddToShoppingList: (items: string[]) => void;
 }
 
+type Tab = 'ingredients' | 'steps';
+
+const LINE = '#ECE6DA';
+
 export default function RecipeDetail({
   recipe,
   isFavorite,
@@ -20,222 +27,285 @@ export default function RecipeDetail({
   onToggleFavorite,
   onAddToShoppingList,
 }: Props) {
-  const ingredients = recipe.ingredients
+  const [tab, setTab] = useState<Tab>('ingredients');
+  const [showPhoto, setShowPhoto] = useState(false);
+  // Abhaken beim Kochen/Einkaufen – nur für diese Ansicht, wird nicht gespeichert.
+  const [doneIngredients, setDoneIngredients] = useState<Set<string>>(new Set());
+  const [doneSteps, setDoneSteps] = useState<Set<string>>(new Set());
+
+  const ingredientSections = parseSections(recipe.ingredients);
+  const stepSections = parseSections(recipe.instructions);
+  const shoppingLines = recipe.ingredients
     .split('\n')
     .map((l) => l.trim())
     .filter(Boolean);
 
-  const steps = recipe.instructions
-    .split('\n')
-    .map((l) => l.trim())
-    .filter(Boolean);
+  const toggle = (setter: React.Dispatch<React.SetStateAction<Set<string>>>, key: string) =>
+    setter((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+
+  const RecipeIcon = getRecipeIcon(recipe.emoji);
+  const circleBtn =
+    'w-10 h-10 rounded-full flex items-center justify-center bg-white shadow-sm transition-transform active:scale-90';
+
+  // Fortlaufende Nummerierung der Schritte über alle Abschnitte hinweg
+  let stepCounter = 0;
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: COLORS.bg }}>
-      {/* Foto oder Icon-Hero als Fallback */}
-      <div
-        className="relative h-64 flex items-center justify-center overflow-hidden"
-        style={{ backgroundColor: getCategoryTint(recipe.category) }}
-      >
-        {recipe.image_url ? (
-          <img src={recipe.image_url} alt="" className="w-full h-full object-cover" />
-        ) : (
-          (() => {
-            const RecipeIcon = getRecipeIcon(recipe.emoji);
-            return <RecipeIcon size={80} strokeWidth={1.5} color={COLORS.primary} />;
-          })()
-        )}
-
-        {/* Back button */}
-        <button
-          onClick={onBack}
-          className="absolute top-12 left-4 w-10 h-10 rounded-full flex items-center justify-center bg-white/80 backdrop-blur-sm shadow-sm text-xl transition-transform active:scale-90"
-          aria-label="Zurück"
-        >
-          ←
+      {/* Obere Leiste */}
+      <div className="flex items-center justify-between px-4 pt-12">
+        <button onClick={onBack} className={circleBtn} aria-label="Zurück">
+          <ArrowLeft size={20} strokeWidth={2} color={COLORS.ink} />
         </button>
-
-        {/* Quelle + Edit + Favorite */}
-        <div className="absolute top-12 right-4 flex gap-2">
+        <div className="flex gap-2">
           {recipe.source_url && (
             <a
               href={recipe.source_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-10 h-10 rounded-full flex items-center justify-center bg-white/80 backdrop-blur-sm shadow-sm transition-transform active:scale-90"
+              className={circleBtn}
               aria-label="Original-Rezept öffnen"
               title="Original-Rezept öffnen"
             >
-              <svg className="w-4 h-4" fill="none" stroke={COLORS.primary} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 17L17 7M17 7H7M17 7V17" />
-              </svg>
+              <ArrowUpRight size={18} strokeWidth={2} color={COLORS.primary} />
             </a>
           )}
           <button
             onClick={onToggleFavorite}
-            className="w-10 h-10 rounded-full flex items-center justify-center bg-white/80 backdrop-blur-sm shadow-sm transition-transform active:scale-90"
+            className={circleBtn}
             aria-label={isFavorite ? 'Favorit entfernen' : 'Als Favorit markieren'}
           >
             <Heart size={18} strokeWidth={2} color={COLORS.danger} fill={isFavorite ? COLORS.danger : 'none'} />
           </button>
-          <button
-            onClick={onEdit}
-            className="w-10 h-10 rounded-full flex items-center justify-center bg-white/80 backdrop-blur-sm shadow-sm transition-transform active:scale-90"
-            aria-label="Bearbeiten"
-          >
+          <button onClick={onEdit} className={circleBtn} aria-label="Bearbeiten">
             <Pencil size={16} strokeWidth={2} color={COLORS.ink} />
           </button>
         </div>
       </div>
 
-      {/* Content card */}
-      <div
-        className="relative -mt-6 rounded-t-3xl px-5 pt-6 pb-32"
-        style={{ backgroundColor: COLORS.bg }}
-      >
-        {/* Name + meta */}
-        <h1
-          className="text-2xl font-bold mb-2 leading-tight"
-          style={{ color: COLORS.primary, fontFamily: "'Playfair Display', Georgia, serif" }}
-        >
-          {recipe.name}
-        </h1>
-        <div className="flex items-center gap-3 text-sm mb-5" style={{ color: COLORS.muted }}>
-          <span className="flex items-center gap-1">
-            <Clock size={14} strokeWidth={2} />
-            {recipe.time_minutes} Min
-          </span>
-          <span>·</span>
-          <span
-            className="px-3 py-1 rounded-full text-xs font-medium"
-            style={{ backgroundColor: COLORS.primaryLight, color: COLORS.primary }}
-          >
-            {recipe.category}
-          </span>
-        </div>
-
-        {/* Macro cards */}
-        <div className="grid grid-cols-3 gap-3 mb-6">
-          <MacroCard
-            icon={LeafyGreen}
-            label="Gemüse"
-            value={recipe.macro_veggies}
-            bg={COLORS.veggieBg}
-            color={COLORS.veggieText}
-          />
-          <MacroCard
-            icon={Wheat}
-            label="Carbs"
-            value={recipe.macro_carbs}
-            bg={COLORS.carbsBg}
-            color={COLORS.carbsText}
-          />
-          <MacroCard
-            icon={Nut}
-            label="Protein"
-            value={recipe.macro_protein}
-            bg={COLORS.proteinBg}
-            color={COLORS.proteinText}
-          />
-        </div>
-
-        {/* Ingredients */}
-        <Section title="Zutaten">
-          <ul className="space-y-2">
-            {ingredients.map((ingredient, i) => (
-              <li key={i} className="flex items-start gap-3">
-                <span
-                  className="mt-1.5 w-2 h-2 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: COLORS.primary }}
-                />
-                <span className="text-sm" style={{ color: COLORS.ink }}>{ingredient}</span>
-              </li>
-            ))}
-          </ul>
-        </Section>
-
-        {/* Instructions */}
-        <Section title="Zubereitung">
-          <ol className="space-y-4">
-            {steps.map((step, i) => (
-              <li key={i} className="flex items-start gap-4">
-                <span
-                  className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white mt-0.5"
-                  style={{ backgroundColor: COLORS.primary }}
-                >
-                  {i + 1}
-                </span>
-                <span className="text-sm leading-relaxed pt-1" style={{ color: COLORS.ink }}>{step}</span>
-              </li>
-            ))}
-          </ol>
-        </Section>
-
-        {/* Tip */}
-        {recipe.tip && (
-          <div
-            className="rounded-2xl p-4 mb-6 flex items-start gap-3"
-            style={{ backgroundColor: COLORS.tipBg, border: `1px solid ${COLORS.tipBorder}` }}
-          >
-            <Lightbulb size={20} strokeWidth={2} color={COLORS.tipText} className="flex-shrink-0" />
-            <p className="text-sm leading-relaxed" style={{ color: COLORS.tipText }}>
-              {recipe.tip}
-            </p>
-          </div>
-        )}
-
-        {/* Add to shopping list button */}
+      {/* Kompakter Kopf: kleines Foto/Icon, Titel, Meta */}
+      <div className="flex items-center gap-3.5 px-5 pt-4">
         <button
-          onClick={() => onAddToShoppingList(ingredients)}
-          className="w-full py-4 rounded-2xl text-white font-semibold text-sm transition-all active:scale-98 flex items-center justify-center gap-2"
-          style={{
-            backgroundColor: COLORS.primary,
-            boxShadow: '0 4px 16px rgba(38,70,83,0.35)',
-          }}
+          onClick={() => recipe.image_url && setShowPhoto(true)}
+          disabled={!recipe.image_url}
+          className="w-[72px] h-[72px] rounded-2xl overflow-hidden flex items-center justify-center flex-shrink-0"
+          style={{ backgroundColor: getCategoryTint(recipe.category) }}
+          aria-label={recipe.image_url ? 'Foto vergrößern' : undefined}
         >
-          <ShoppingCart size={18} strokeWidth={2} />
-          Zutaten zur Einkaufsliste hinzufügen
+          {recipe.image_url ? (
+            <img src={recipe.image_url} alt="" className="w-full h-full object-cover" />
+          ) : (
+            <RecipeIcon size={32} strokeWidth={1.5} color={COLORS.primary} />
+          )}
         </button>
+        <div className="min-w-0 flex-1">
+          <h1
+            className="text-[22px] font-bold leading-tight mb-1.5"
+            style={{ color: COLORS.primary, fontFamily: "'Playfair Display', Georgia, serif" }}
+          >
+            {recipe.name}
+          </h1>
+          <div className="flex items-center flex-wrap gap-x-2 gap-y-1 text-xs" style={{ color: COLORS.muted }}>
+            <span className="flex items-center gap-1">
+              <Clock size={13} strokeWidth={2} />
+              {recipe.time_minutes} Min
+            </span>
+            <span
+              className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold"
+              style={{ backgroundColor: COLORS.primaryLight, color: COLORS.primary }}
+            >
+              {recipe.category}
+            </span>
+          </div>
+        </div>
       </div>
-    </div>
-  );
-}
 
-function MacroCard({
-  icon: Icon,
-  label,
-  value,
-  bg,
-  color,
-}: {
-  icon: LucideIcon;
-  label: string;
-  value: number;
-  bg: string;
-  color: string;
-}) {
-  return (
-    <div
-      className="rounded-2xl p-3 flex flex-col items-center text-center"
-      style={{ backgroundColor: bg }}
-    >
-      <Icon size={24} strokeWidth={1.75} color={color} className="mb-1" />
-      <span className="text-xl font-bold" style={{ color }}>{value}%</span>
-      <span className="text-xs font-medium mt-0.5" style={{ color }}>{label}</span>
-    </div>
-  );
-}
+      {/* Makro-Leiste */}
+      <div className="px-5 pt-4">
+        <div className="flex h-2 rounded-full overflow-hidden" style={{ backgroundColor: COLORS.mutedLight }}>
+          <div style={{ flexGrow: recipe.macro_veggies, backgroundColor: COLORS.veggieText }} />
+          <div style={{ flexGrow: recipe.macro_carbs, backgroundColor: COLORS.carbsText }} />
+          <div style={{ flexGrow: recipe.macro_protein, backgroundColor: COLORS.proteinText }} />
+        </div>
+        <div className="flex gap-3.5 mt-1.5 text-[11px]" style={{ color: COLORS.muted }}>
+          <Legend color={COLORS.veggieText} label={`Gemüse ${recipe.macro_veggies}%`} />
+          <Legend color={COLORS.carbsText} label={`Carbs ${recipe.macro_carbs}%`} />
+          <Legend color={COLORS.proteinText} label={`Protein ${recipe.macro_protein}%`} />
+        </div>
+      </div>
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="mb-6">
-      <h2
-        className="text-lg font-bold mb-4"
-        style={{ color: COLORS.primary, fontFamily: "'Playfair Display', Georgia, serif" }}
+      {/* Tabs (bleiben beim Scrollen oben) */}
+      <div
+        className="sticky top-0 z-10 px-5 pt-3 pb-2"
+        style={{ backgroundColor: COLORS.bg, paddingTop: 'max(env(safe-area-inset-top), 12px)' }}
       >
-        {title}
-      </h2>
-      {children}
+        <div className="flex p-[3px] rounded-2xl" style={{ backgroundColor: COLORS.mutedLight }} role="tablist">
+          {(
+            [
+              { key: 'ingredients', label: 'Zutaten' },
+              { key: 'steps', label: 'Zubereitung' },
+            ] as { key: Tab; label: string }[]
+          ).map((t) => {
+            const active = tab === t.key;
+            return (
+              <button
+                key={t.key}
+                role="tab"
+                aria-selected={active}
+                onClick={() => setTab(t.key)}
+                className="flex-1 py-2 rounded-xl text-sm font-semibold transition-all"
+                style={{
+                  backgroundColor: active ? COLORS.surface : 'transparent',
+                  color: active ? COLORS.primary : COLORS.muted,
+                  boxShadow: active ? '0 1px 3px rgba(35,40,58,0.12)' : 'none',
+                }}
+              >
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="px-5 pb-32">
+        {tab === 'ingredients' ? (
+          <>
+            <div className="grid" style={{ gridTemplateColumns: 'fit-content(7.5rem) 1fr' }}>
+              {ingredientSections.map((section, si) => (
+                <div key={si} style={{ display: 'contents' }}>
+                  {section.title && <SectionHeading title={section.title} span />}
+                  {section.lines.map((line, li) => {
+                    const key = `${si}-${li}`;
+                    const done = doneIngredients.has(key);
+                    const { amount, name } = splitAmountAndName(line);
+                    const cell = { borderBottom: `1px solid ${LINE}`, color: done ? '#B4BDC0' : undefined };
+                    return (
+                      <div
+                        key={key}
+                        style={{ display: 'contents', cursor: 'pointer' }}
+                        onClick={() => toggle(setDoneIngredients, key)}
+                      >
+                        <div
+                          className="py-2 pr-3 text-right text-sm tabular-nums"
+                          style={{ ...cell, color: done ? '#B4BDC0' : COLORS.muted, textDecoration: done ? 'line-through' : 'none' }}
+                        >
+                          {amount}
+                        </div>
+                        <div
+                          className="py-2 text-sm"
+                          style={{ ...cell, color: done ? '#B4BDC0' : COLORS.ink, textDecoration: done ? 'line-through' : 'none' }}
+                        >
+                          {name}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={() => onAddToShoppingList(shoppingLines)}
+              className="w-full mt-6 py-4 rounded-2xl text-white font-semibold text-sm transition-all active:scale-98 flex items-center justify-center gap-2"
+              style={{ backgroundColor: COLORS.primary, boxShadow: '0 4px 16px rgba(38,70,83,0.35)' }}
+            >
+              <ShoppingCart size={18} strokeWidth={2} />
+              Zutaten zur Einkaufsliste hinzufügen
+            </button>
+          </>
+        ) : (
+          <>
+            <div>
+              {stepSections.map((section, si) => (
+                <div key={si}>
+                  {section.title && <SectionHeading title={section.title} />}
+                  {section.lines.map((line, li) => {
+                    stepCounter += 1;
+                    const key = `${si}-${li}`;
+                    const done = doneSteps.has(key);
+                    return (
+                      <div
+                        key={key}
+                        onClick={() => toggle(setDoneSteps, key)}
+                        className="grid py-2.5 cursor-pointer"
+                        style={{ gridTemplateColumns: '24px 1fr', borderBottom: `1px solid ${LINE}` }}
+                      >
+                        <span
+                          className="text-xs pt-[3px] tabular-nums"
+                          style={{ color: done ? '#B4BDC0' : COLORS.muted }}
+                        >
+                          {stepCounter}
+                        </span>
+                        <span
+                          className="text-sm leading-relaxed"
+                          style={{ color: done ? '#B4BDC0' : COLORS.ink, textDecoration: done ? 'line-through' : 'none' }}
+                        >
+                          {line}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+
+            {recipe.tip && (
+              <div
+                className="rounded-2xl p-4 mt-6 flex items-start gap-3"
+                style={{ backgroundColor: COLORS.tipBg, border: `1px solid ${COLORS.tipBorder}` }}
+              >
+                <Lightbulb size={20} strokeWidth={2} color={COLORS.tipText} className="flex-shrink-0" />
+                <p className="text-sm leading-relaxed" style={{ color: COLORS.tipText }}>
+                  {recipe.tip}
+                </p>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Foto groß */}
+      {showPhoto && recipe.image_url && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(15,20,28,0.9)' }}
+          onClick={() => setShowPhoto(false)}
+        >
+          <img src={recipe.image_url} alt="" className="max-w-full max-h-full rounded-2xl object-contain" />
+          <button
+            className="absolute top-12 right-4 w-10 h-10 rounded-full bg-white/90 flex items-center justify-center"
+            aria-label="Schließen"
+            onClick={() => setShowPhoto(false)}
+          >
+            <X size={20} strokeWidth={2} color={COLORS.ink} />
+          </button>
+        </div>
+      )}
     </div>
+  );
+}
+
+function Legend({ color, label }: { color: string; label: string }) {
+  return (
+    <span className="flex items-center gap-1">
+      <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+      {label}
+    </span>
+  );
+}
+
+function SectionHeading({ title, span = false }: { title: string; span?: boolean }) {
+  return (
+    <h3
+      className={`text-[11px] font-bold uppercase tracking-wider pt-4 pb-1.5 ${span ? 'col-span-2' : ''}`}
+      style={{ color: COLORS.muted }}
+    >
+      {title}
+    </h3>
   );
 }

@@ -57,6 +57,7 @@ const UNITS: UnitDef[] = [
   { pattern: 'blätter|blatt', canonical: 'Blatt' },
   { pattern: 'köpfe|kopf', canonical: 'Kopf' },
   { pattern: 'stangen?', canonical: 'Stange' },
+  { pattern: 'würfel', canonical: 'Würfel' },
 ];
 
 const UNIT_REGEXES = UNITS.map((u) => ({
@@ -221,6 +222,8 @@ function parseSingle(line: string): ParsedIngredient | null {
 export function parseIngredientLine(line: string): ParsedIngredient[] {
   const trimmed = line.trim();
   if (!trimmed) return [];
+  // "## Teig"-Abschnittsüberschriften sind keine Zutaten
+  if (trimmed.startsWith('#')) return [];
   const hasAmount = NUMBER_RE.test(trimmed.replace(/^(saft|schale|abrieb|zeste)\s+(?:von|einer?|einem)\s+/i, ''));
   if (!hasAmount) {
     const parts = splitOutsideParens(trimmed, /^(?:,|\s+und\s+|\s*&\s*|\s*\+\s*)/i);
@@ -228,6 +231,30 @@ export function parseIngredientLine(line: string): ParsedIngredient[] {
   }
   const single = parseSingle(trimmed);
   return single ? [single] : [];
+}
+
+/**
+ * Trennt eine Zutaten-Zeile für die Anzeige in Menge ("200 g") und Name ("Feta"),
+ * ohne sie inhaltlich zu verändern. Zeilen ohne führende Menge bleiben komplett im Namen.
+ */
+export function splitAmountAndName(line: string): { amount: string; name: string } {
+  const trimmed = line.trim();
+  const m = trimmed.match(NUMBER_RE);
+  if (!m) return { amount: '', name: trimmed };
+  let rest = trimmed.slice(m[0].length);
+  let unitText = '';
+  for (const { re } of UNIT_REGEXES) {
+    const um = rest.match(re);
+    if (um) {
+      unitText = um[0].replace(/\.$/, '');
+      rest = rest.slice(um[0].length).trim();
+      break;
+    }
+  }
+  const name = rest.trim();
+  if (!name) return { amount: '', name: trimmed };
+  const amount = `${m[0].trim()}${unitText ? ` ${unitText}` : ''}`.replace(/\s*[-–]\s*/, '–');
+  return { amount, name };
 }
 
 // ---------- Mengen & Anzeige ----------
