@@ -29,9 +29,6 @@ export default function RecipeDetail({
 }: Props) {
   const [tab, setTab] = useState<Tab>('ingredients');
   const [showPhoto, setShowPhoto] = useState(false);
-  // Abhaken beim Kochen/Einkaufen – nur für diese Ansicht, wird nicht gespeichert.
-  const [doneIngredients, setDoneIngredients] = useState<Set<string>>(new Set());
-  const [doneSteps, setDoneSteps] = useState<Set<string>>(new Set());
 
   const ingredientSections = parseSections(recipe.ingredients);
   const stepSections = parseSections(recipe.instructions);
@@ -39,14 +36,6 @@ export default function RecipeDetail({
     .split('\n')
     .map((l) => l.trim())
     .filter(Boolean);
-
-  const toggle = (setter: React.Dispatch<React.SetStateAction<Set<string>>>, key: string) =>
-    setter((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
 
   const RecipeIcon = getRecipeIcon(recipe.emoji);
   const circleBtn =
@@ -180,25 +169,18 @@ export default function RecipeDetail({
                 <div key={si} style={{ display: 'contents' }}>
                   {section.title && <SectionHeading title={section.title} span />}
                   {section.lines.map((line, li) => {
-                    const key = `${si}-${li}`;
-                    const done = doneIngredients.has(key);
                     const { amount, name } = splitAmountAndName(line);
-                    const cell = { borderBottom: `1px solid ${LINE}`, color: done ? '#B4BDC0' : undefined };
                     return (
-                      <div
-                        key={key}
-                        style={{ display: 'contents', cursor: 'pointer' }}
-                        onClick={() => toggle(setDoneIngredients, key)}
-                      >
+                      <div key={li} style={{ display: 'contents' }}>
                         <div
                           className="py-2 pr-3 text-right text-sm tabular-nums"
-                          style={{ ...cell, color: done ? '#B4BDC0' : COLORS.muted, textDecoration: done ? 'line-through' : 'none' }}
+                          style={{ borderBottom: `1px solid ${LINE}`, color: COLORS.muted }}
                         >
                           {amount}
                         </div>
                         <div
                           className="py-2 text-sm"
-                          style={{ ...cell, color: done ? '#B4BDC0' : COLORS.ink, textDecoration: done ? 'line-through' : 'none' }}
+                          style={{ borderBottom: `1px solid ${LINE}`, color: COLORS.ink }}
                         >
                           {name}
                         </div>
@@ -226,25 +208,16 @@ export default function RecipeDetail({
                   {section.title && <SectionHeading title={section.title} />}
                   {section.lines.map((line, li) => {
                     stepCounter += 1;
-                    const key = `${si}-${li}`;
-                    const done = doneSteps.has(key);
                     return (
                       <div
-                        key={key}
-                        onClick={() => toggle(setDoneSteps, key)}
-                        className="grid py-2.5 cursor-pointer"
+                        key={li}
+                        className="grid py-2.5"
                         style={{ gridTemplateColumns: '24px 1fr', borderBottom: `1px solid ${LINE}` }}
                       >
-                        <span
-                          className="text-xs pt-[3px] tabular-nums"
-                          style={{ color: done ? '#B4BDC0' : COLORS.muted }}
-                        >
+                        <span className="text-xs pt-[3px] tabular-nums" style={{ color: COLORS.muted }}>
                           {stepCounter}
                         </span>
-                        <span
-                          className="text-sm leading-relaxed"
-                          style={{ color: done ? '#B4BDC0' : COLORS.ink, textDecoration: done ? 'line-through' : 'none' }}
-                        >
+                        <span className="text-sm leading-relaxed" style={{ color: COLORS.ink }}>
                           {line}
                         </span>
                       </div>

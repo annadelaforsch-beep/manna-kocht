@@ -113,18 +113,25 @@ function tokenize(text: string): string[] {
     .filter(Boolean);
 }
 
-/** Stems der inhaltlich relevanten Tokens (ohne Füllwörter), mit Synonymen */
-function contentStems(text: string): string[] {
+const UMLAUT_FOLD: Record<string, string> = { ä: 'a', ö: 'o', ü: 'u' };
+
+/**
+ * Stems der inhaltlich relevanten Tokens (ohne Füllwörter), mit Synonymen.
+ * `foldUmlauts` macht Äpfel/Apfel, Nüsse/Nuss usw. vergleichbar – nur für den
+ * Zusammenführ-Schlüssel, nicht fürs Basics-Matching (sonst träfe "Öl" auch "Alkohol").
+ */
+function contentStems(text: string, foldUmlauts = false): string[] {
   return tokenize(text)
     .filter((t) => !STOP_TOKENS.has(t) && !/^\d+$/.test(t))
     .map((t) => {
       const s = stemToken(t);
-      return SYNONYMS[s] ?? SYNONYMS[t] ?? s;
+      const base = SYNONYMS[s] ?? SYNONYMS[t] ?? s;
+      return foldUmlauts ? base.replace(/[äöü]/g, (c) => UMLAUT_FOLD[c]) : base;
     });
 }
 
 function makeKey(name: string): string {
-  return contentStems(name).sort().join(' ');
+  return contentStems(name, true).sort().join(' ');
 }
 
 // ---------- Parsing ----------
@@ -349,7 +356,9 @@ function newId(): string {
 /** Strukturierte Daten eines Items; ältere Items (nur `name`) werden nachträglich geparst. */
 function describeItem(item: ShoppingItem): { key: string; baseName: string; amounts: AmountPart[] } {
   if (item.key && item.baseName) {
-    return { key: item.key, baseName: item.baseName, amounts: item.amounts ?? [] };
+    // Schlüssel immer frisch berechnen, damit ältere Einträge (vor Regel-Verbesserungen)
+    // mit neuen zusammengeführt werden.
+    return { key: makeKey(item.baseName) || item.key, baseName: item.baseName, amounts: item.amounts ?? [] };
   }
   const parsed = parseIngredientLine(item.name)[0];
   if (parsed) return { key: parsed.key, baseName: parsed.name, amounts: parsed.amounts };
