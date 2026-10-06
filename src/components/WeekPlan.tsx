@@ -12,7 +12,7 @@ interface Props {
   loading: boolean;
   onAssign: (planDate: string, recipeId: string, position: number) => void;
   onClear: (planDate: string, position: number) => void;
-  onAddWeekToShoppingList: (ingredientLines: string[]) => void;
+  onAddWeekToShoppingList: (groups: { source: string; lines: string[] }[]) => void;
   onCreateRecipe: (planDate: string, position: number, suggestedName: string) => void;
   onSelectRecipe: (id: string) => void;
 }
@@ -127,17 +127,22 @@ export default function WeekPlan({
   });
 
   const handleCreateShoppingList = () => {
-    const lines: string[] = [];
+    // Pro Plan-Slot eine Quelle: so wird nichts doppelt eingerechnet, wenn man den Button
+    // erneut drückt, und neu geplante Gerichte kommen trotzdem dazu.
+    const groups: { source: string; lines: string[] }[] = [];
     for (const entry of assignedInWeek) {
       const recipe = recipeById.get(entry.recipe_id);
       if (!recipe) continue;
-      const ingredientLines = recipe.ingredients
+      const lines = recipe.ingredients
         .split('\n')
         .map((l) => l.trim())
         .filter(Boolean);
-      lines.push(...ingredientLines);
+      groups.push({
+        source: `week:${entry.plan_date}:${entry.position}:${entry.recipe_id}`,
+        lines,
+      });
     }
-    onAddWeekToShoppingList(lines);
+    onAddWeekToShoppingList(groups);
   };
 
   const extraCategories: readonly string[] = ['Kleine Gerichte & Beilagen', 'Süßes'];

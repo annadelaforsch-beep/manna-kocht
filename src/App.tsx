@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { Recipe, ShoppingItem, Screen, MealPlanEntry } from './types';
+import type { Recipe, Screen, MealPlanEntry, PantryItem } from './types';
 import { fetchRecipes, insertRecipe, insertRecipes, updateRecipe, deleteRecipe } from './supabase';
 import { fetchMealPlan, setMealPlanEntry, clearMealPlanEntry } from './mealPlan';
+import { fetchPantry, addPantryItem, removePantryItem, DEFAULT_PANTRY } from './pantry';
+import { addToShoppingState, reconcileWithPantry, type AddGroup, type ShoppingState } from './ingredients';
 import { DEFAULT_RECIPES } from './defaults';
 import { COLORS } from './theme';
 import HomeScreen from './components/HomeScreen';
@@ -35,8 +37,17 @@ export default function App() {
   const [favorites, setFavorites] = useState<string[]>(() =>
     loadFromStorage<string[]>('mk_favorites', [])
   );
-  const [shoppingList, setShoppingList] = useState<ShoppingItem[]>(() =>
-    loadFromStorage<ShoppingItem[]>('mk_shopping', [])
+  // Einkaufsliste + "Zuhause vorhanden" (wegen Basics herausgefilterte Zutaten) – lokal pro Gerät
+  const [shopping, setShopping] = useState<ShoppingState>(() => ({
+    items: loadFromStorage('mk_shopping', []),
+    excluded: loadFromStorage('mk_excluded', []),
+  }));
+  // Basics zuhause (Salz, Öl, Gewürze …) – geteilt über Supabase, lokal gecacht
+  const [pantry, setPantry] = useState<PantryItem[]>(() =>
+    loadFromStorage<PantryItem[]>(
+      'mk_pantry',
+      DEFAULT_PANTRY.map((name, i) => ({ id: `local-default-${i}`, name }))
+    )
   );
   const [mealPlanEntries, setMealPlanEntries] = useState<MealPlanEntry[]>([]);
   const [mealPlanLoading, setMealPlanLoading] = useState(true);
@@ -56,10 +67,15 @@ export default function App() {
     localStorage.setItem('mk_favorites', JSON.stringify(favorites));
   }, [favorites]);
 
-  // Persist shopping list
+  // Persist shopping list, excluded items and pantry cache
   useEffect(() => {
-    localStorage.setItem('mk_shopping', JSON.stringify(shoppingList));
-  }, [shoppingList]);
+    localStorage.setItem('mk_shopping', JSON.stringify(shopping.items));
+    localStorage.setItem('mk_excluded', JSON.stringify(shopping.excluded));
+  }, [shopping]);
+
+  useEffect(() => {
+    localStorage.setItem('mk_pantry', JSON.stringify(pantry));
+  }, [pantry]);
 
   // Load recipes from Supabase on mount
   const loadRecipes = useCallback(async () => {
@@ -105,6 +121,21 @@ export default function App() {
     loadMealPlan();
   }, [loadMealPlan]);
 
+  // Basics laden (bei Fehler, z. B. Tabelle fehlt oder offline, bleibt der lokale Stand)
+  useEffect(() => {
+    let cancelled = false;
+    fetchPantry()
+      .then((rows) => {
+        if (cancelled) return;
+        setPantry(rows);
+        setShopping((prev) => reconcileWithPantry(prev, rows));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // --- Favorite handlers ---
   const handleToggleFavorite = (id: string) => {
     setFavorites((prev) =>
@@ -113,43 +144,97 @@ export default function App() {
   };
 
   // --- Shopping list handlers ---
-  const handleAddToShoppingList = (items: string[]) => {
-    const newItems: ShoppingItem[] = items.map((name) => ({
-      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      name,
-      checked: false,
-    }));
-    setShoppingList((prev) => {
-      const existingNames = new Set(prev.map((i) => i.name.toLowerCase()));
-      const unique = newItems.filter((i) => !existingNames.has(i.name.toLowerCase()));
-      return [...prev, ...unique];
-    });
+  const pantryNames = pantry.map((p) => p.name);
+
+  const addToShopping = (
+    groups: AddGroup[],
+    options?: { applyPantry?: boolean; forced?: boolean }
+  ) => {
+    setShopping((prev) => addToShoppingState(prev, groups, pantryNames, options));
+  };
+
+  // Mengen/Schreibweisen werden zusammengeführt, Basics herausgefiltert; `source` verhindert
+  // doppeltes Einrechnen, wenn derselbe Button mehrfach gedrückt wird.
+  const handleAddToShoppingList = (items: string[], source?: string) => {
+    addToShopping([{ source, lines: items }]);
+    switchTab('shopping');
+  };
+
+  const handleAddWeekToShoppingList = (groups: AddGroup[]) => {
+    addToShopping(groups);
     switchTab('shopping');
   };
 
   const handleAddShoppingItem = (name: string) => {
-    setShoppingList((prev) => [
-      ...prev,
-      { id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, name, checked: false },
-    ]);
+    addToShopping([{ lines: [name] }], { applyPantry: false, forced: true });
   };
 
   const handleToggleShoppingItem = (id: string) => {
-    setShoppingList((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, checked: !item.checked } : item))
-    );
+    setShopping((prev) => ({
+      ...prev,
+      items: prev.items.map((item) => (item.id === id ? { ...item, checked: !item.checked } : item)),
+    }));
   };
 
   const handleRemoveShoppingItem = (id: string) => {
-    setShoppingList((prev) => prev.filter((item) => item.id !== id));
+    setShopping((prev) => ({ ...prev, items: prev.items.filter((item) => item.id !== id) }));
   };
 
   const handleCheckAllItems = () => {
-    setShoppingList((prev) => prev.map((item) => ({ ...item, checked: true })));
+    setShopping((prev) => ({ ...prev, items: prev.items.map((item) => ({ ...item, checked: true })) }));
   };
 
   const handleClearShoppingList = () => {
-    setShoppingList([]);
+    setShopping({ items: [], excluded: [] });
+  };
+
+  // "Doch kaufen": Zutat aus "Zuhause vorhanden" zurück auf die Liste
+  const handleRestoreExcluded = (id: string) => {
+    setShopping((prev) => {
+      const entry = prev.excluded.find((e) => e.id === id);
+      if (!entry) return prev;
+      return addToShoppingState(
+        { items: prev.items, excluded: prev.excluded.filter((e) => e.id !== id) },
+        [{ lines: [entry.name] }],
+        [],
+        { applyPantry: false, forced: true }
+      );
+    });
+  };
+
+  // --- Basics (Vorrat) handlers ---
+  const handleAddPantry = async (name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed || pantry.some((p) => p.name.toLowerCase() === trimmed.toLowerCase())) return;
+    const optimistic: PantryItem = { id: `local-${Date.now()}`, name: trimmed };
+    const next = [...pantry, optimistic];
+    setPantry(next);
+    setShopping((prev) => reconcileWithPantry(prev, next));
+    try {
+      const saved = await addPantryItem(trimmed);
+      setPantry((prev) => prev.map((p) => (p.id === optimistic.id ? saved : p)));
+    } catch {
+      // bleibt lokal gespeichert, falls Supabase nicht erreichbar ist
+    }
+  };
+
+  const handleRemovePantry = async (id: string) => {
+    const next = pantry.filter((p) => p.id !== id);
+    setPantry(next);
+    setShopping((prev) => reconcileWithPantry(prev, next));
+    if (id.startsWith('local-')) return;
+    try {
+      await removePantryItem(id);
+    } catch {
+      // lokal bereits entfernt
+    }
+  };
+
+  // Einzelnen Artikel der Liste als Basic merken (z. B. Paprikapulver)
+  const handleMarkAsBasic = (itemId: string) => {
+    const item = shopping.items.find((i) => i.id === itemId);
+    if (!item) return;
+    handleAddPantry((item.baseName ?? item.name).replace(/\([^)]*\)/g, '').trim());
   };
 
   // --- Wochenplan handlers ---
@@ -280,7 +365,7 @@ export default function App() {
             pushScreen('form');
           }}
           onToggleFavorite={() => handleToggleFavorite(selectedRecipe.id)}
-          onAddToShoppingList={handleAddToShoppingList}
+          onAddToShoppingList={(lines) => handleAddToShoppingList(lines, `recipe:${selectedRecipe.id}`)}
         />
       )}
 
@@ -297,7 +382,13 @@ export default function App() {
 
       {currentScreen === 'shopping' && (
         <ShoppingList
-          items={shoppingList}
+          items={shopping.items}
+          excluded={shopping.excluded}
+          pantry={pantry}
+          onRestoreExcluded={handleRestoreExcluded}
+          onMarkAsBasic={handleMarkAsBasic}
+          onAddPantry={handleAddPantry}
+          onRemovePantry={handleRemovePantry}
           onToggle={handleToggleShoppingItem}
           onRemove={handleRemoveShoppingItem}
           onAdd={handleAddShoppingItem}
@@ -313,7 +404,7 @@ export default function App() {
           loading={mealPlanLoading}
           onAssign={handleAssignMealPlan}
           onClear={handleClearMealPlan}
-          onAddWeekToShoppingList={handleAddToShoppingList}
+          onAddWeekToShoppingList={handleAddWeekToShoppingList}
           onCreateRecipe={(planDate, position, suggestedName) => {
             setEditingRecipe(null);
             setPendingPlanDate(planDate);

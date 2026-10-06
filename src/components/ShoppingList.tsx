@@ -1,10 +1,17 @@
 import { useState } from 'react';
-import type { ShoppingItem } from '../types';
+import type { ExcludedItem, PantryItem, ShoppingItem } from '../types';
+import PantrySheet from './PantrySheet';
 import { COLORS } from '../theme';
-import { ShoppingCart, Check, Trash2, X } from 'lucide-react';
+import { ShoppingCart, Check, Trash2, X, House, ChevronDown, ChevronRight, Plus } from 'lucide-react';
 
 interface Props {
   items: ShoppingItem[];
+  excluded: ExcludedItem[];
+  pantry: PantryItem[];
+  onRestoreExcluded: (id: string) => void;
+  onMarkAsBasic: (id: string) => void;
+  onAddPantry: (name: string) => void;
+  onRemovePantry: (id: string) => void;
   onToggle: (id: string) => void;
   onRemove: (id: string) => void;
   onAdd: (name: string) => void;
@@ -12,9 +19,24 @@ interface Props {
   onClear: () => void;
 }
 
-export default function ShoppingList({ items, onToggle, onRemove, onAdd, onCheckAll, onClear }: Props) {
+export default function ShoppingList({
+  items,
+  excluded,
+  pantry,
+  onRestoreExcluded,
+  onMarkAsBasic,
+  onAddPantry,
+  onRemovePantry,
+  onToggle,
+  onRemove,
+  onAdd,
+  onCheckAll,
+  onClear,
+}: Props) {
   const [newItem, setNewItem] = useState('');
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [showPantry, setShowPantry] = useState(false);
+  const [showExcluded, setShowExcluded] = useState(false);
 
   const handleAdd = () => {
     const trimmed = newItem.trim();
@@ -50,6 +72,17 @@ export default function ShoppingList({ items, onToggle, onRemove, onAdd, onCheck
             )}
           </div>
 
+          <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowPantry(true)}
+            className="w-10 h-10 rounded-full flex items-center justify-center transition-transform active:scale-90"
+            style={{ backgroundColor: COLORS.surface, boxShadow: '0 1px 4px rgba(35,40,58,0.1)' }}
+            aria-label="Basics zuhause verwalten"
+            title="Basics zuhause"
+          >
+            <House size={18} strokeWidth={1.75} color={COLORS.primary} />
+          </button>
+
           {/* Progress ring */}
           {total > 0 && (
             <div className="relative w-12 h-12">
@@ -74,6 +107,7 @@ export default function ShoppingList({ items, onToggle, onRemove, onAdd, onCheck
               </span>
             </div>
           )}
+          </div>
         </div>
 
         {/* Add item input */}
@@ -124,6 +158,7 @@ export default function ShoppingList({ items, onToggle, onRemove, onAdd, onCheck
                       item={item}
                       onToggle={() => onToggle(item.id)}
                       onRemove={() => onRemove(item.id)}
+                      onMarkAsBasic={() => onMarkAsBasic(item.id)}
                     />
                   ))}
                 </div>
@@ -144,6 +179,7 @@ export default function ShoppingList({ items, onToggle, onRemove, onAdd, onCheck
                       item={item}
                       onToggle={() => onToggle(item.id)}
                       onRemove={() => onRemove(item.id)}
+                      onMarkAsBasic={() => onMarkAsBasic(item.id)}
                     />
                   ))}
                 </div>
@@ -198,7 +234,56 @@ export default function ShoppingList({ items, onToggle, onRemove, onAdd, onCheck
             </div>
           </>
         )}
+
+        {/* Zuhause vorhanden */}
+        {excluded.length > 0 && (
+          <div className="pt-2">
+            <button
+              onClick={() => setShowExcluded((v) => !v)}
+              className="flex items-center gap-1 text-sm font-semibold"
+              style={{ color: COLORS.primary }}
+            >
+              {showExcluded ? (
+                <ChevronDown size={16} strokeWidth={2.5} />
+              ) : (
+                <ChevronRight size={16} strokeWidth={2.5} />
+              )}
+              Zuhause vorhanden ({excluded.length})
+            </button>
+            {showExcluded && (
+              <div className="flex flex-wrap gap-2 mt-3">
+                {excluded.map((e) => (
+                  <span
+                    key={e.id}
+                    className="inline-flex items-center gap-1 pl-3 pr-1 py-1 rounded-full text-sm"
+                    style={{ backgroundColor: COLORS.mutedLight, color: COLORS.ink }}
+                  >
+                    {e.name}
+                    <button
+                      onClick={() => onRestoreExcluded(e.id)}
+                      className="w-6 h-6 flex items-center justify-center rounded-full"
+                      style={{ color: COLORS.primary }}
+                      aria-label={`${e.name} doch kaufen`}
+                      title="Doch kaufen"
+                    >
+                      <Plus size={14} strokeWidth={2.5} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
+
+      {showPantry && (
+        <PantrySheet
+          items={pantry}
+          onAdd={onAddPantry}
+          onRemove={onRemovePantry}
+          onClose={() => setShowPantry(false)}
+        />
+      )}
     </div>
   );
 }
@@ -207,10 +292,12 @@ function ShoppingItemRow({
   item,
   onToggle,
   onRemove,
+  onMarkAsBasic,
 }: {
   item: ShoppingItem;
   onToggle: () => void;
   onRemove: () => void;
+  onMarkAsBasic: () => void;
 }) {
   return (
     <div
@@ -244,6 +331,17 @@ function ShoppingItemRow({
         {item.name}
       </span>
 
+      {!item.checked && (
+        <button
+          onClick={onMarkAsBasic}
+          className="w-7 h-7 flex items-center justify-center rounded-full transition-all active:scale-90"
+          style={{ color: COLORS.muted }}
+          aria-label="Als Basic zuhause merken"
+          title="Habe ich zuhause (künftig nicht mehr auflisten)"
+        >
+          <House size={14} strokeWidth={1.75} />
+        </button>
+      )}
       <button
         onClick={onRemove}
         className="w-7 h-7 flex items-center justify-center rounded-full transition-all active:scale-90"

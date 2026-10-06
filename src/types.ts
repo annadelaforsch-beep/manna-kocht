@@ -17,9 +17,33 @@ export interface Recipe {
 
 export interface ShoppingItem {
   id: string;
+  /** Anzeigetext inkl. Menge, z. B. "300 g Feta" */
   name: string;
   checked: boolean;
   category?: string;
+  // --- Felder für das Zusammenführen (fehlen bei älteren Einträgen) ---
+  /** normalisierter Vergleichsschlüssel */
+  key?: string;
+  /** Name ohne Menge, z. B. "Feta" */
+  baseName?: string;
+  amounts?: { unit: string; amount: number }[];
+  /** Quellen (Rezept/Wochenplan-Slot), die bereits eingerechnet sind – verhindert Verdopplung */
+  sources?: string[];
+  /** wurde bewusst trotz Basics-Liste hinzugefügt */
+  forced?: boolean;
+}
+
+/** Vorrat zuhause (Salz, Öl, Gewürze …): kommt nicht auf die Einkaufsliste */
+export interface PantryItem {
+  id: string;
+  name: string;
+}
+
+/** Zutat, die wegen der Basics-Liste nicht auf der Einkaufsliste gelandet ist */
+export interface ExcludedItem {
+  id: string;
+  key: string;
+  name: string;
 }
 
 export interface MealPlanEntry {
