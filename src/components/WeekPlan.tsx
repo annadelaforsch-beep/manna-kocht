@@ -1,12 +1,19 @@
 import { useMemo, useState } from 'react';
 import type { MealPlanEntry, Recipe } from '../types';
-import { MAX_EXTRAS } from '../types';
-import { COLORS, getCategoryTint, SHADOWS } from '../theme';
-import { Input } from './ui/Field';
+import { COLORS, SHADOWS } from '../theme';
 import PrimaryButton from './ui/PrimaryButton';
-import TopSheet from './ui/TopSheet';
-import { getRecipeIcon } from '../icons';
-import { ShoppingCart, X, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import DayCard from './week/DayCard';
+import RecipePicker from './week/RecipePicker';
+import {
+  formatDayLabel,
+  formatWeekLabel,
+  getMinWeekOffset,
+  getWeekDates,
+  getWeekStart,
+  MAX_WEEK_OFFSET,
+  toDateKey,
+} from '../weekUtils';
+import { ShoppingCart, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface Props {
   recipes: Recipe[];
@@ -19,29 +26,6 @@ interface Props {
   onSelectRecipe: (id: string) => void;
 }
 
-const WEEKDAY_LABELS = ['Sa', 'So', 'Mo', 'Di', 'Mi', 'Do', 'Fr'];
-
-function toDateKey(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
-// Die Woche beginnt am Samstag (Einkaufstag), nicht am Montag.
-function getWeekStart(d: Date): Date {
-  const day = d.getDay(); // 0=So .. 6=Sa
-  const diff = (day + 1) % 7; // Tage seit dem letzten Samstag
-  const start = new Date(d);
-  start.setHours(0, 0, 0, 0);
-  start.setDate(d.getDate() - diff);
-  return start;
-}
-
-function formatDayLabel(d: Date): string {
-  return `${d.getDate()}.${d.getMonth() + 1}.`;
-}
-
 export default function WeekPlan({
   recipes,
   entries,
@@ -52,56 +36,28 @@ export default function WeekPlan({
   onCreateRecipe,
   onSelectRecipe,
 }: Props) {
-  const [pickerDate, setPickerDate] = useState<string | null>(null);
-  // 0 = Hauptgericht, 1.. = Extra (Beilage/Nachspeise)
-  const [pickerPosition, setPickerPosition] = useState(0);
-  const [pickerSearch, setPickerSearch] = useState('');
-  // Bei Extras zeigt die Auswahl zuerst nur Beilagen & Süßes; mit "Alle Rezepte" der Rest.
-  const [pickerShowAll, setPickerShowAll] = useState(false);
+  // Wofür gerade ein Rezept gewählt wird (Tag + 0 = Hauptgericht, 1.. = Extra)
+  const [picker, setPicker] = useState<{ date: string; position: number } | null>(null);
   // 0 = aktuelle Woche, -1 = letzte Woche, +1 = nächste Woche (weiter in die Zukunft nicht)
   const [weekOffset, setWeekOffset] = useState(0);
 
   const todayKey = toDateKey(new Date());
   const currentWeekStart = useMemo(() => getWeekStart(new Date()), []);
-  const currentWeekStartKey = toDateKey(currentWeekStart);
 
   const weekStart = useMemo(() => {
     const d = new Date(currentWeekStart);
     d.setDate(currentWeekStart.getDate() + weekOffset * 7);
     return d;
   }, [currentWeekStart, weekOffset]);
-  const weekDates = useMemo(
-    () =>
-      Array.from({ length: 7 }, (_, i) => {
-        const d = new Date(weekStart);
-        d.setDate(weekStart.getDate() + i);
-        return d;
-      }),
-    [weekStart]
-  );
+  const weekDates = useMemo(() => getWeekDates(weekStart), [weekStart]);
 
   // Vergangene Wochen sind nur lesbar; geplant wird in der aktuellen und der nächsten Woche.
   const isPastWeek = weekOffset < 0;
-  const MAX_OFFSET = 1;
 
   // Wie weit man zurückblättern kann: bis zur Woche des ältesten Eintrags.
-  const minOffset = useMemo(() => {
-    let earliest: string | null = null;
-    for (const e of entries) if (!earliest || e.plan_date < earliest) earliest = e.plan_date;
-    if (!earliest || earliest >= currentWeekStartKey) return 0;
-    const earliestWeekStart = getWeekStart(new Date(`${earliest}T00:00:00`));
-    const diffDays = Math.round((currentWeekStart.getTime() - earliestWeekStart.getTime()) / 86400000);
-    return -Math.round(diffDays / 7);
-  }, [entries, currentWeekStart, currentWeekStartKey]);
+  const minOffset = useMemo(() => getMinWeekOffset(entries, currentWeekStart), [entries, currentWeekStart]);
 
-  const weekLabel =
-    weekOffset === 0
-      ? 'Diese Woche'
-      : weekOffset === 1
-        ? 'Nächste Woche'
-        : weekOffset === -1
-          ? 'Letzte Woche'
-          : `Vor ${-weekOffset} Wochen`;
+  const weekLabel = formatWeekLabel(weekOffset);
 
   const entriesByDate = useMemo(() => {
     const map = new Map<string, MealPlanEntry[]>();
@@ -146,19 +102,17 @@ export default function WeekPlan({
     onAddWeekToShoppingList(groups);
   };
 
-  const extraCategories: readonly string[] = ['Kleine Gerichte & Beilagen', 'Süßes'];
-  const onlyExtraCategories = pickerPosition > 0 && !pickerShowAll;
-  const filteredPickerRecipes = recipes.filter(
-    (r) =>
-      r.name.toLowerCase().includes(pickerSearch.toLowerCase()) &&
-      (!onlyExtraCategories || extraCategories.includes(r.category))
-  );
+  const handleCreateRecipe = (suggestedName: string) => {
+    if (!picker) return;
+    const { date, position } = picker;
+    setPicker(null);
+    onCreateRecipe(date, position, suggestedName);
+  };
 
-  const openPicker = (date: string, position: number) => {
-    setPickerDate(date);
-    setPickerPosition(position);
-    setPickerSearch('');
-    setPickerShowAll(false);
+  const handlePick = (recipeId: string) => {
+    if (!picker) return;
+    onAssign(picker.date, recipeId, picker.position);
+    setPicker(null);
   };
 
   return (
@@ -196,8 +150,8 @@ export default function WeekPlan({
             </p>
           </div>
           <button
-            onClick={() => setWeekOffset((o) => Math.min(MAX_OFFSET, o + 1))}
-            disabled={weekOffset >= MAX_OFFSET}
+            onClick={() => setWeekOffset((o) => Math.min(MAX_WEEK_OFFSET, o + 1))}
+            disabled={weekOffset >= MAX_WEEK_OFFSET}
             className="w-10 h-10 rounded-full flex items-center justify-center transition-transform active:scale-90 disabled:opacity-30"
             style={{ backgroundColor: COLORS.surface, boxShadow: SHADOWS.raised }}
             aria-label="Nächste Woche"
@@ -216,135 +170,19 @@ export default function WeekPlan({
           <div className="space-y-2">
             {weekDates.map((d, i) => {
               const key = toDateKey(d);
-              const dayEntries = entriesByDate.get(key) ?? [];
-              const mainEntry = dayEntries.find((e) => e.position === 0);
-              const recipe = mainEntry ? recipeById.get(mainEntry.recipe_id) : undefined;
-              const extras = dayEntries.filter((e) => e.position > 0);
-              const freePosition = Array.from({ length: MAX_EXTRAS }, (_, n) => n + 1).find(
-                (p) => !extras.some((e) => e.position === p)
-              );
-              const isToday = key === todayKey;
               return (
-                <div
+                <DayCard
                   key={key}
-                  className="rounded-2xl p-3"
-                  style={{
-                    backgroundColor: COLORS.surface,
-                    boxShadow: SHADOWS.card,
-                    border: `2px solid ${isToday ? COLORS.primary : 'transparent'}`,
-                  }}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 flex-shrink-0 text-center">
-                      <div className="text-xs font-semibold" style={{ color: COLORS.muted }}>
-                        {WEEKDAY_LABELS[i]}
-                      </div>
-                      <div className="text-sm font-bold" style={{ color: COLORS.ink }}>
-                        {formatDayLabel(d)}
-                      </div>
-                    </div>
-
-                    {recipe ? (
-                      <>
-                        <button
-                          onClick={() => onSelectRecipe(recipe.id)}
-                          className="flex-1 flex items-center gap-3 text-left min-w-0"
-                        >
-                          <div
-                            className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0"
-                            style={{ backgroundColor: getCategoryTint(recipe.category) }}
-                          >
-                            {recipe.image_url ? (
-                              <img src={recipe.image_url} alt="" className="w-full h-full object-cover" />
-                            ) : (
-                              (() => {
-                                const RecipeIcon = getRecipeIcon(recipe.emoji);
-                                return <RecipeIcon size={18} strokeWidth={1.75} color={COLORS.primary} />;
-                              })()
-                            )}
-                          </div>
-                          <span className="text-sm font-medium truncate" style={{ color: COLORS.ink }}>
-                            {recipe.name}
-                          </span>
-                        </button>
-                        {!isPastWeek && (
-                          <button
-                            onClick={() => onClear(key, 0)}
-                            className="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-full transition-transform active:scale-90"
-                            style={{ color: COLORS.muted }}
-                            aria-label="Entfernen"
-                          >
-                            <X size={16} strokeWidth={2} />
-                          </button>
-                        )}
-                      </>
-                    ) : isPastWeek ? (
-                      <span className="flex-1 text-sm py-2" style={{ color: COLORS.mutedLight }}>
-                        –
-                      </span>
-                    ) : (
-                      <button
-                        onClick={() => openPicker(key, 0)}
-                        className="flex-1 text-left text-sm font-medium py-2"
-                        style={{ color: COLORS.muted }}
-                      >
-                        + Rezept wählen
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Extras (Beilage / Nachspeise) – nur wenn es ein Hauptgericht gibt */}
-                  {recipe && (extras.length > 0 || (!isPastWeek && freePosition !== undefined)) && (
-                    <div className="flex flex-wrap items-center gap-1.5 mt-2 pl-[60px]">
-                      {extras.map((extra) => {
-                        const extraRecipe = recipeById.get(extra.recipe_id);
-                        const ExtraIcon = extraRecipe ? getRecipeIcon(extraRecipe.emoji) : null;
-                        return (
-                          <span
-                            key={extra.id}
-                            className="inline-flex items-center gap-1 max-w-full rounded-full text-xs font-medium"
-                            style={{
-                              backgroundColor: extraRecipe ? getCategoryTint(extraRecipe.category) : COLORS.mutedLight,
-                              color: COLORS.ink,
-                              paddingLeft: 8,
-                              paddingRight: isPastWeek ? 8 : 2,
-                            }}
-                          >
-                            <button
-                              onClick={() => extraRecipe && onSelectRecipe(extraRecipe.id)}
-                              disabled={!extraRecipe}
-                              className="inline-flex items-center gap-1 min-w-0 py-1"
-                            >
-                              {ExtraIcon && <ExtraIcon size={12} strokeWidth={2} color={COLORS.primary} />}
-                              <span className="truncate">{extraRecipe ? extraRecipe.name : '(gelöschtes Rezept)'}</span>
-                            </button>
-                            {!isPastWeek && (
-                              <button
-                                onClick={() => onClear(key, extra.position)}
-                                className="w-6 h-6 flex-shrink-0 flex items-center justify-center rounded-full"
-                                style={{ color: COLORS.muted }}
-                                aria-label="Extra entfernen"
-                              >
-                                <X size={12} strokeWidth={2} />
-                              </button>
-                            )}
-                          </span>
-                        );
-                      })}
-                      {!isPastWeek && freePosition !== undefined && (
-                        <button
-                          onClick={() => openPicker(key, freePosition)}
-                          className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium transition-transform active:scale-95"
-                          style={{ backgroundColor: COLORS.bg, color: COLORS.muted }}
-                          aria-label="Beilage oder Nachspeise hinzufügen"
-                        >
-                          <Plus size={12} strokeWidth={2.5} />
-                          {extras.length === 0 && 'Beilage / Dessert'}
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
+                  date={d}
+                  weekdayIndex={i}
+                  isToday={key === todayKey}
+                  readOnly={isPastWeek}
+                  entries={entriesByDate.get(key) ?? []}
+                  recipeById={recipeById}
+                  onSelectRecipe={onSelectRecipe}
+                  onClear={onClear}
+                  onOpenPicker={(date, position) => setPicker({ date, position })}
+                />
               );
             })}
           </div>
@@ -359,103 +197,14 @@ export default function WeekPlan({
 
       </div>
 
-      {/* Rezept-Auswahl */}
-      {pickerDate && (
-        // Oben verankert und exakt an den sichtbaren Bereich (ohne Tastatur) angepasst,
-        // damit Suchfeld + Ergebnisse nie hinter der Handy-Tastatur verschwinden.
-        <TopSheet
-          title={pickerPosition > 0 ? 'Beilage / Nachspeise wählen' : 'Rezept wählen'}
-          onClose={() => setPickerDate(null)}
-          header={
-            <div className="pt-1">
-              <Input
-                type="text"
-                autoFocus
-                value={pickerSearch}
-                onChange={(e) => setPickerSearch(e.target.value)}
-                placeholder="Rezept suchen…"
-                className="w-full"
-              />
-              {pickerPosition > 0 && (
-                <div className="flex gap-2 mt-3">
-                  {[
-                    { all: false, label: 'Beilagen & Süßes' },
-                    { all: true, label: 'Alle Rezepte' },
-                  ].map((opt) => {
-                    const active = pickerShowAll === opt.all;
-                    return (
-                      <button
-                        key={opt.label}
-                        onClick={() => setPickerShowAll(opt.all)}
-                        className="px-3 py-1.5 rounded-full text-xs font-medium transition-all"
-                        style={{
-                          backgroundColor: active ? COLORS.primary : COLORS.surface,
-                          color: active ? '#fff' : COLORS.ink,
-                          boxShadow: active ? SHADOWS.primarySm : SHADOWS.soft,
-                        }}
-                      >
-                        {opt.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          }
-        >
-          <div className="space-y-2">
-            {filteredPickerRecipes.length === 0 ? (
-              <div className="flex flex-col items-center gap-3 py-6">
-                <p className="text-sm text-center" style={{ color: COLORS.muted }}>
-                  Kein Rezept gefunden
-                </p>
-                <button
-                  onClick={() => {
-                    const date = pickerDate;
-                    const suggestedName = pickerSearch.trim();
-                    setPickerDate(null);
-                    setPickerSearch('');
-                    onCreateRecipe(date, pickerPosition, suggestedName);
-                  }}
-                  className="flex items-center gap-2 px-5 py-3 rounded-2xl text-sm font-semibold text-white transition-all active:scale-98"
-                  style={{ backgroundColor: COLORS.primary, boxShadow: SHADOWS.primarySm }}
-                >
-                  <Plus size={18} strokeWidth={2.5} />
-                  Rezept hinzufügen
-                </button>
-              </div>
-            ) : (
-              filteredPickerRecipes.map((r) => (
-                <button
-                  key={r.id}
-                  onClick={() => {
-                    onAssign(pickerDate, r.id, pickerPosition);
-                    setPickerDate(null);
-                  }}
-                  className="w-full flex items-center gap-3 p-2 rounded-2xl text-left transition-all active:scale-98"
-                  style={{ backgroundColor: COLORS.surface, boxShadow: SHADOWS.soft }}
-                >
-                  <div
-                    className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0"
-                    style={{ backgroundColor: getCategoryTint(r.category) }}
-                  >
-                    {r.image_url ? (
-                      <img src={r.image_url} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      (() => {
-                        const RecipeIcon = getRecipeIcon(r.emoji);
-                        return <RecipeIcon size={18} strokeWidth={1.75} color={COLORS.primary} />;
-                      })()
-                    )}
-                  </div>
-                  <span className="text-sm font-medium" style={{ color: COLORS.ink }}>
-                    {r.name}
-                  </span>
-                </button>
-              ))
-            )}
-          </div>
-        </TopSheet>
+      {picker && (
+        <RecipePicker
+          recipes={recipes}
+          position={picker.position}
+          onPick={handlePick}
+          onCreate={handleCreateRecipe}
+          onClose={() => setPicker(null)}
+        />
       )}
     </div>
   );
