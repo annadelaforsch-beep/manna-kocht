@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Recipe, FilterOption } from '../types';
 import { FILTER_OPTIONS } from '../types';
-import { COLORS, getCategoryTint } from '../theme';
+import { COLORS, getCategoryTint, SHADOWS } from '../theme';
 import { getRecipeIcon } from '../icons';
 import { Utensils, Heart, Pencil, LeafyGreen, Wheat, Nut } from 'lucide-react';
 
@@ -72,7 +72,7 @@ export default function HomeScreen({
             style={{
               backgroundColor: COLORS.surface,
               color: COLORS.ink,
-              boxShadow: '0 1px 4px rgba(35,40,58,0.08)',
+              boxShadow: SHADOWS.card,
             }}
           />
         </div>
@@ -89,7 +89,7 @@ export default function HomeScreen({
                 style={{
                   backgroundColor: active ? COLORS.primary : COLORS.surface,
                   color: active ? '#fff' : COLORS.ink,
-                  boxShadow: active ? '0 2px 8px rgba(38,70,83,0.3)' : '0 1px 3px rgba(35,40,58,0.08)',
+                  boxShadow: active ? SHADOWS.primarySm : SHADOWS.soft,
                 }}
               >
                 {filter}
@@ -102,7 +102,7 @@ export default function HomeScreen({
       {/* Makro-Hinweis-Banner */}
       <div
         className="mx-5 mb-5 rounded-2xl px-4 py-3 flex items-center gap-3"
-        style={{ backgroundColor: COLORS.surface, boxShadow: '0 1px 4px rgba(35,40,58,0.08)' }}
+        style={{ backgroundColor: COLORS.surface, boxShadow: SHADOWS.card }}
       >
         <Utensils size={20} strokeWidth={2} color={COLORS.primary} className="flex-shrink-0" />
         <div className="text-sm" style={{ color: COLORS.ink }}>

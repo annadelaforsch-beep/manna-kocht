@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react';
 import type { MealPlanEntry, Recipe } from '../types';
 import { MAX_EXTRAS } from '../types';
-import { COLORS, getCategoryTint } from '../theme';
+import { COLORS, getCategoryTint, SHADOWS } from '../theme';
+import { Input } from './ui/Field';
+import PrimaryButton from './ui/PrimaryButton';
+import TopSheet from './ui/TopSheet';
 import { getRecipeIcon } from '../icons';
-import { useVisualViewport } from '../useVisualViewport';
 import { ShoppingCart, X, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 
 interface Props {
@@ -58,7 +60,6 @@ export default function WeekPlan({
   const [pickerShowAll, setPickerShowAll] = useState(false);
   // 0 = aktuelle Woche, -1 = letzte Woche, +1 = nächste Woche (weiter in die Zukunft nicht)
   const [weekOffset, setWeekOffset] = useState(0);
-  const viewport = useVisualViewport();
 
   const todayKey = toDateKey(new Date());
   const currentWeekStart = useMemo(() => getWeekStart(new Date()), []);
@@ -181,7 +182,7 @@ export default function WeekPlan({
             onClick={() => setWeekOffset((o) => Math.max(minOffset, o - 1))}
             disabled={weekOffset <= minOffset}
             className="w-10 h-10 rounded-full flex items-center justify-center transition-transform active:scale-90 disabled:opacity-30"
-            style={{ backgroundColor: COLORS.surface, boxShadow: '0 1px 4px rgba(35,40,58,0.1)' }}
+            style={{ backgroundColor: COLORS.surface, boxShadow: SHADOWS.raised }}
             aria-label="Vorherige Woche"
           >
             <ChevronLeft size={20} strokeWidth={2} color={COLORS.ink} />
@@ -198,7 +199,7 @@ export default function WeekPlan({
             onClick={() => setWeekOffset((o) => Math.min(MAX_OFFSET, o + 1))}
             disabled={weekOffset >= MAX_OFFSET}
             className="w-10 h-10 rounded-full flex items-center justify-center transition-transform active:scale-90 disabled:opacity-30"
-            style={{ backgroundColor: COLORS.surface, boxShadow: '0 1px 4px rgba(35,40,58,0.1)' }}
+            style={{ backgroundColor: COLORS.surface, boxShadow: SHADOWS.raised }}
             aria-label="Nächste Woche"
           >
             <ChevronRight size={20} strokeWidth={2} color={COLORS.ink} />
@@ -229,7 +230,7 @@ export default function WeekPlan({
                   className="rounded-2xl p-3"
                   style={{
                     backgroundColor: COLORS.surface,
-                    boxShadow: '0 1px 4px rgba(35,40,58,0.08)',
+                    boxShadow: SHADOWS.card,
                     border: `2px solid ${isToday ? COLORS.primary : 'transparent'}`,
                   }}
                 >
@@ -350,15 +351,10 @@ export default function WeekPlan({
         )}
 
         {!isPastWeek && (
-        <button
-          onClick={handleCreateShoppingList}
-          disabled={assignedInWeek.length === 0}
-          className="w-full py-4 rounded-2xl text-white font-semibold text-sm transition-all active:scale-98 disabled:opacity-40 flex items-center justify-center gap-2"
-          style={{ backgroundColor: COLORS.primary, boxShadow: '0 4px 16px rgba(38,70,83,0.35)' }}
-        >
+        <PrimaryButton onClick={handleCreateShoppingList} disabled={assignedInWeek.length === 0}>
           <ShoppingCart size={18} strokeWidth={2} />
           Einkaufsliste für die Woche erstellen
-        </button>
+        </PrimaryButton>
         )}
 
       </div>
@@ -367,53 +363,18 @@ export default function WeekPlan({
       {pickerDate && (
         // Oben verankert und exakt an den sichtbaren Bereich (ohne Tastatur) angepasst,
         // damit Suchfeld + Ergebnisse nie hinter der Handy-Tastatur verschwinden.
-        <div
-          className="fixed left-0 right-0 z-40 flex items-start"
-          style={{
-            top: viewport.offsetTop,
-            height: viewport.height,
-            backgroundColor: 'rgba(35,40,58,0.4)',
-          }}
-          onClick={() => setPickerDate(null)}
-        >
-          <div
-            className="w-full max-w-lg mx-auto rounded-b-3xl flex flex-col"
-            style={{
-              backgroundColor: COLORS.bg,
-              maxHeight: '100%',
-              paddingTop: 'env(safe-area-inset-top)',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="p-5 pb-3">
-              <div className="flex items-center justify-between mb-3">
-                <h2
-                  className="text-lg font-bold"
-                  style={{ color: COLORS.primary, fontFamily: "'Playfair Display', Georgia, serif" }}
-                >
-                  {pickerPosition > 0 ? 'Beilage / Nachspeise wählen' : 'Rezept wählen'}
-                </h2>
-                <button
-                  onClick={() => setPickerDate(null)}
-                  className="w-9 h-9 rounded-full flex items-center justify-center transition-transform active:scale-90"
-                  style={{ backgroundColor: COLORS.surface, boxShadow: '0 1px 4px rgba(35,40,58,0.1)' }}
-                  aria-label="Schließen"
-                >
-                  <X size={18} strokeWidth={2} color={COLORS.ink} />
-                </button>
-              </div>
-              <input
+        <TopSheet
+          title={pickerPosition > 0 ? 'Beilage / Nachspeise wählen' : 'Rezept wählen'}
+          onClose={() => setPickerDate(null)}
+          header={
+            <div className="pt-1">
+              <Input
                 type="text"
                 autoFocus
                 value={pickerSearch}
                 onChange={(e) => setPickerSearch(e.target.value)}
                 placeholder="Rezept suchen…"
-                className="w-full px-4 py-3 rounded-2xl text-sm border-0 outline-none"
-                style={{
-                  backgroundColor: COLORS.surface,
-                  color: COLORS.ink,
-                  boxShadow: '0 1px 4px rgba(35,40,58,0.08)',
-                }}
+                className="w-full"
               />
               {pickerPosition > 0 && (
                 <div className="flex gap-2 mt-3">
@@ -430,7 +391,7 @@ export default function WeekPlan({
                         style={{
                           backgroundColor: active ? COLORS.primary : COLORS.surface,
                           color: active ? '#fff' : COLORS.ink,
-                          boxShadow: active ? '0 2px 8px rgba(38,70,83,0.3)' : '0 1px 3px rgba(35,40,58,0.08)',
+                          boxShadow: active ? SHADOWS.primarySm : SHADOWS.soft,
                         }}
                       >
                         {opt.label}
@@ -440,63 +401,61 @@ export default function WeekPlan({
                 </div>
               )}
             </div>
-            <div
-              className="min-h-0 flex-1 overflow-y-auto px-5 pb-5 space-y-2"
-              style={{ overscrollBehavior: 'contain' }}
-            >
-              {filteredPickerRecipes.length === 0 ? (
-                <div className="flex flex-col items-center gap-3 py-6">
-                  <p className="text-sm text-center" style={{ color: COLORS.muted }}>
-                    Kein Rezept gefunden
-                  </p>
-                  <button
-                    onClick={() => {
-                      const date = pickerDate;
-                      const suggestedName = pickerSearch.trim();
-                      setPickerDate(null);
-                      setPickerSearch('');
-                      onCreateRecipe(date, pickerPosition, suggestedName);
-                    }}
-                    className="flex items-center gap-2 px-5 py-3 rounded-2xl text-sm font-semibold text-white transition-all active:scale-98"
-                    style={{ backgroundColor: COLORS.primary, boxShadow: '0 2px 8px rgba(38,70,83,0.3)' }}
+          }
+        >
+          <div className="space-y-2">
+            {filteredPickerRecipes.length === 0 ? (
+              <div className="flex flex-col items-center gap-3 py-6">
+                <p className="text-sm text-center" style={{ color: COLORS.muted }}>
+                  Kein Rezept gefunden
+                </p>
+                <button
+                  onClick={() => {
+                    const date = pickerDate;
+                    const suggestedName = pickerSearch.trim();
+                    setPickerDate(null);
+                    setPickerSearch('');
+                    onCreateRecipe(date, pickerPosition, suggestedName);
+                  }}
+                  className="flex items-center gap-2 px-5 py-3 rounded-2xl text-sm font-semibold text-white transition-all active:scale-98"
+                  style={{ backgroundColor: COLORS.primary, boxShadow: SHADOWS.primarySm }}
+                >
+                  <Plus size={18} strokeWidth={2.5} />
+                  Rezept hinzufügen
+                </button>
+              </div>
+            ) : (
+              filteredPickerRecipes.map((r) => (
+                <button
+                  key={r.id}
+                  onClick={() => {
+                    onAssign(pickerDate, r.id, pickerPosition);
+                    setPickerDate(null);
+                  }}
+                  className="w-full flex items-center gap-3 p-2 rounded-2xl text-left transition-all active:scale-98"
+                  style={{ backgroundColor: COLORS.surface, boxShadow: SHADOWS.soft }}
+                >
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0"
+                    style={{ backgroundColor: getCategoryTint(r.category) }}
                   >
-                    <Plus size={18} strokeWidth={2.5} />
-                    Rezept hinzufügen
-                  </button>
-                </div>
-              ) : (
-                filteredPickerRecipes.map((r) => (
-                  <button
-                    key={r.id}
-                    onClick={() => {
-                      onAssign(pickerDate, r.id, pickerPosition);
-                      setPickerDate(null);
-                    }}
-                    className="w-full flex items-center gap-3 p-2 rounded-2xl text-left transition-all active:scale-98"
-                    style={{ backgroundColor: COLORS.surface, boxShadow: '0 1px 3px rgba(35,40,58,0.08)' }}
-                  >
-                    <div
-                      className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0"
-                      style={{ backgroundColor: getCategoryTint(r.category) }}
-                    >
-                      {r.image_url ? (
-                        <img src={r.image_url} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        (() => {
-                          const RecipeIcon = getRecipeIcon(r.emoji);
-                          return <RecipeIcon size={18} strokeWidth={1.75} color={COLORS.primary} />;
-                        })()
-                      )}
-                    </div>
-                    <span className="text-sm font-medium" style={{ color: COLORS.ink }}>
-                      {r.name}
-                    </span>
-                  </button>
-                ))
-              )}
-            </div>
+                    {r.image_url ? (
+                      <img src={r.image_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      (() => {
+                        const RecipeIcon = getRecipeIcon(r.emoji);
+                        return <RecipeIcon size={18} strokeWidth={1.75} color={COLORS.primary} />;
+                      })()
+                    )}
+                  </div>
+                  <span className="text-sm font-medium" style={{ color: COLORS.ink }}>
+                    {r.name}
+                  </span>
+                </button>
+              ))
+            )}
           </div>
-        </div>
+        </TopSheet>
       )}
     </div>
   );

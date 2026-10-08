@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import type { ExcludedItem, PantryItem, ShoppingItem } from '../types';
 import PantrySheet from './PantrySheet';
-import { COLORS } from '../theme';
+import { COLORS, SHADOWS } from '../theme';
+import { Input } from './ui/Field';
 import { ShoppingCart, Check, Trash2, X, House, ChevronDown, ChevronRight, Plus } from 'lucide-react';
 
 interface Props {
@@ -76,7 +77,7 @@ export default function ShoppingList({
           <button
             onClick={() => setShowPantry(true)}
             className="w-10 h-10 rounded-full flex items-center justify-center transition-transform active:scale-90"
-            style={{ backgroundColor: COLORS.surface, boxShadow: '0 1px 4px rgba(35,40,58,0.1)' }}
+            style={{ backgroundColor: COLORS.surface, boxShadow: SHADOWS.raised }}
             aria-label="Basics zuhause verwalten"
             title="Basics zuhause"
           >
@@ -112,23 +113,18 @@ export default function ShoppingList({
 
         {/* Add item input */}
         <div className="flex gap-2">
-          <input
+          <Input
             type="text"
             value={newItem}
             onChange={(e) => setNewItem(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') handleAdd(); }}
             placeholder="Artikel hinzufügen…"
-            className="flex-1 px-4 py-3 rounded-2xl text-sm border-0 outline-none"
-            style={{
-              backgroundColor: COLORS.surface,
-              color: COLORS.ink,
-              boxShadow: '0 1px 4px rgba(35,40,58,0.08)',
-            }}
+            className="flex-1"
           />
           <button
             onClick={handleAdd}
             className="w-12 h-12 rounded-2xl flex items-center justify-center text-white text-xl font-light flex-shrink-0"
-            style={{ backgroundColor: COLORS.primary, boxShadow: '0 2px 8px rgba(38,70,83,0.3)' }}
+            style={{ backgroundColor: COLORS.primary, boxShadow: SHADOWS.primarySm }}
             aria-label="Hinzufügen"
           >
             +

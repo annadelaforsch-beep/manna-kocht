@@ -3,7 +3,9 @@ import type { Recipe } from '../types';
 import { CATEGORIES } from '../types';
 import { extractRecipeFromUrl } from '../extractRecipe';
 import { uploadRecipeImage } from '../uploadImage';
-import { COLORS } from '../theme';
+import { COLORS, SHADOWS } from '../theme';
+import { Input, Textarea } from './ui/Field';
+import PrimaryButton from './ui/PrimaryButton';
 import { RECIPE_ICONS, getRecipeIcon } from '../icons';
 import { Camera, Link2, Check, Trash2, LeafyGreen, Wheat, Nut, ArrowRight, type LucideIcon } from 'lucide-react';
 
@@ -151,7 +153,7 @@ export default function RecipeForm({ editingRecipe, initialName, planHint, onBac
         <button
           onClick={onBack}
           className="w-10 h-10 rounded-full flex items-center justify-center text-xl"
-          style={{ backgroundColor: COLORS.surface, boxShadow: '0 1px 4px rgba(35,40,58,0.1)' }}
+          style={{ backgroundColor: COLORS.surface, boxShadow: SHADOWS.raised }}
           aria-label="Zurück"
         >
           ←
@@ -187,20 +189,20 @@ export default function RecipeForm({ editingRecipe, initialName, planHint, onBac
         {!editingRecipe && (
           <div
             className="rounded-2xl p-4 space-y-3"
-            style={{ backgroundColor: COLORS.surface, boxShadow: '0 1px 4px rgba(35,40,58,0.08)' }}
+            style={{ backgroundColor: COLORS.surface, boxShadow: SHADOWS.card }}
           >
             <label className="flex items-center gap-2 text-sm font-semibold" style={{ color: COLORS.ink }}>
               <Link2 size={16} strokeWidth={2} />
               Rezept von einer Website übernehmen
             </label>
             <div className="flex gap-2">
-              <input
+              <Input
                 type="url"
                 value={linkUrl}
                 onChange={(e) => setLinkUrl(e.target.value)}
                 placeholder="https://…"
-                className="flex-1 px-4 py-3 rounded-2xl text-sm border-0 outline-none"
-                style={{ backgroundColor: COLORS.bg, color: COLORS.ink }}
+                className="flex-1"
+                style={{ backgroundColor: COLORS.bg, boxShadow: 'none' }}
               />
               <button
                 onClick={handleExtractFromLink}
@@ -259,7 +261,7 @@ export default function RecipeForm({ editingRecipe, initialName, planHint, onBac
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploadingImage}
                   className="flex-1 py-2 rounded-xl text-sm font-medium disabled:opacity-60"
-                  style={{ backgroundColor: COLORS.surface, color: COLORS.ink, boxShadow: '0 1px 3px rgba(35,40,58,0.08)' }}
+                  style={{ backgroundColor: COLORS.surface, color: COLORS.ink, boxShadow: SHADOWS.soft }}
                 >
                   Foto ändern
                 </button>
@@ -278,7 +280,7 @@ export default function RecipeForm({ editingRecipe, initialName, planHint, onBac
               onClick={() => fileInputRef.current?.click()}
               disabled={uploadingImage}
               className="w-full py-4 rounded-2xl text-sm font-medium transition-all active:scale-98 disabled:opacity-60 flex items-center justify-center gap-2"
-              style={{ backgroundColor: COLORS.surface, color: COLORS.ink, boxShadow: '0 1px 4px rgba(35,40,58,0.08)' }}
+              style={{ backgroundColor: COLORS.surface, color: COLORS.ink, boxShadow: SHADOWS.card }}
             >
               {uploadingImage ? (
                 'Wird hochgeladen…'
@@ -306,7 +308,7 @@ export default function RecipeForm({ editingRecipe, initialName, planHint, onBac
               <button
                 onClick={() => setShowIconPicker(!showIconPicker)}
                 className="w-16 h-16 rounded-2xl flex items-center justify-center mb-2 transition-transform active:scale-95"
-                style={{ backgroundColor: COLORS.surface, boxShadow: '0 1px 4px rgba(35,40,58,0.1)' }}
+                style={{ backgroundColor: COLORS.surface, boxShadow: SHADOWS.raised }}
               >
                 <SelectedIcon size={28} strokeWidth={1.75} color={COLORS.primary} />
               </button>
@@ -341,17 +343,12 @@ export default function RecipeForm({ editingRecipe, initialName, planHint, onBac
 
         {/* Name */}
         <FormSection title="Rezeptname *">
-          <input
+          <Input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="z.B. Beeren-Hafer-Bowl"
-            className="w-full px-4 py-3 rounded-2xl text-sm border-0 outline-none"
-            style={{
-              backgroundColor: COLORS.surface,
-              color: COLORS.ink,
-              boxShadow: '0 1px 4px rgba(35,40,58,0.08)',
-            }}
+            className="w-full"
           />
         </FormSection>
 
@@ -367,8 +364,8 @@ export default function RecipeForm({ editingRecipe, initialName, planHint, onBac
                   backgroundColor: category === cat ? COLORS.primary : COLORS.surface,
                   color: category === cat ? '#fff' : COLORS.ink,
                   boxShadow: category === cat
-                    ? '0 2px 8px rgba(38,70,83,0.3)'
-                    : '0 1px 3px rgba(35,40,58,0.08)',
+                    ? SHADOWS.primarySm
+                    : SHADOWS.soft,
                 }}
               >
                 {cat}
@@ -383,7 +380,7 @@ export default function RecipeForm({ editingRecipe, initialName, planHint, onBac
             <button
               onClick={() => setTimeMinutes((t) => Math.max(5, t - 5))}
               className="w-10 h-10 rounded-full flex items-center justify-center text-xl font-bold"
-              style={{ backgroundColor: COLORS.surface, color: COLORS.primary, boxShadow: '0 1px 4px rgba(35,40,58,0.1)' }}
+              style={{ backgroundColor: COLORS.surface, color: COLORS.primary, boxShadow: SHADOWS.raised }}
             >
               −
             </button>
@@ -393,7 +390,7 @@ export default function RecipeForm({ editingRecipe, initialName, planHint, onBac
             <button
               onClick={() => setTimeMinutes((t) => t + 5)}
               className="w-10 h-10 rounded-full flex items-center justify-center text-xl font-bold"
-              style={{ backgroundColor: COLORS.primary, color: '#fff', boxShadow: '0 2px 8px rgba(38,70,83,0.3)' }}
+              style={{ backgroundColor: COLORS.primary, color: '#fff', boxShadow: SHADOWS.primarySm }}
             >
               +
             </button>
@@ -405,18 +402,12 @@ export default function RecipeForm({ editingRecipe, initialName, planHint, onBac
           title="Zutaten * (eine pro Zeile)"
           hint="Abschnitte mit einer Zeile wie „## Teig“ beginnen, z. B. Teig, Sauce, Belag."
         >
-          <textarea
+          <Textarea
             value={ingredients}
             onChange={(e) => setIngredients(e.target.value)}
             placeholder={'200g Haferflocken\n1 Handvoll Beeren\n…'}
             rows={6}
-            className="w-full px-4 py-3 rounded-2xl text-sm border-0 outline-none resize-none"
-            style={{
-              backgroundColor: COLORS.surface,
-              color: COLORS.ink,
-              boxShadow: '0 1px 4px rgba(35,40,58,0.08)',
-              fontFamily: 'inherit',
-            }}
+            className="w-full"
           />
         </FormSection>
 
@@ -425,18 +416,12 @@ export default function RecipeForm({ editingRecipe, initialName, planHint, onBac
           title="Zubereitung * (ein Schritt pro Zeile)"
           hint="Optional dieselben Abschnitte mit „## Teig“ usw. – die Nummerierung läuft durch."
         >
-          <textarea
+          <Textarea
             value={instructions}
             onChange={(e) => setInstructions(e.target.value)}
             placeholder={'Ofen auf 200°C vorheizen.\nZutaten vermengen.\n…'}
             rows={6}
-            className="w-full px-4 py-3 rounded-2xl text-sm border-0 outline-none resize-none"
-            style={{
-              backgroundColor: COLORS.surface,
-              color: COLORS.ink,
-              boxShadow: '0 1px 4px rgba(35,40,58,0.08)',
-              fontFamily: 'inherit',
-            }}
+            className="w-full"
           />
         </FormSection>
 
@@ -478,31 +463,17 @@ export default function RecipeForm({ editingRecipe, initialName, planHint, onBac
 
         {/* Tip */}
         <FormSection title="Tipp (optional)">
-          <textarea
+          <Textarea
             value={tip}
             onChange={(e) => setTip(e.target.value)}
             placeholder="Ein hilfreicher Tipp zum Rezept…"
             rows={3}
-            className="w-full px-4 py-3 rounded-2xl text-sm border-0 outline-none resize-none"
-            style={{
-              backgroundColor: COLORS.surface,
-              color: COLORS.ink,
-              boxShadow: '0 1px 4px rgba(35,40,58,0.08)',
-              fontFamily: 'inherit',
-            }}
+            className="w-full"
           />
         </FormSection>
 
         {/* Save button */}
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="w-full py-4 rounded-2xl text-white font-semibold text-sm transition-all active:scale-98 disabled:opacity-60 flex items-center justify-center gap-2"
-          style={{
-            backgroundColor: COLORS.primary,
-            boxShadow: '0 4px 16px rgba(38,70,83,0.35)',
-          }}
-        >
+        <PrimaryButton onClick={handleSave} disabled={saving}>
           {saving ? (
             'Wird gespeichert…'
           ) : (
@@ -511,7 +482,7 @@ export default function RecipeForm({ editingRecipe, initialName, planHint, onBac
               {editingRecipe ? 'Änderungen speichern' : planHint ? 'Erstellen & einplanen' : 'Rezept erstellen'}
             </>
           )}
-        </button>
+        </PrimaryButton>
 
         {/* Delete button */}
         {editingRecipe && (

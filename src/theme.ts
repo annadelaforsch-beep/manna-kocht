@@ -68,3 +68,12 @@ export function getCategoryAccent(category: string): string {
 export function getCategoryTint(category: string): string {
   return CATEGORY_TINTS[category] ?? COLORS.mutedLight;
 }
+
+// Wiederverwendete Schatten (statt überall dieselben Strings zu kopieren)
+export const SHADOWS = {
+  card: '0 1px 4px rgba(35,40,58,0.08)',
+  raised: '0 1px 4px rgba(35,40,58,0.1)',
+  soft: '0 1px 3px rgba(35,40,58,0.08)',
+  primarySm: '0 2px 8px rgba(38,70,83,0.3)',
+  primaryLg: '0 4px 16px rgba(38,70,83,0.35)',
+} as const;

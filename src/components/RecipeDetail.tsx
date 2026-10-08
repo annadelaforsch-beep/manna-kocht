@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Recipe } from '../types';
 import { COLORS, getCategoryTint } from '../theme';
+import PrimaryButton from './ui/PrimaryButton';
 import { getRecipeIcon } from '../icons';
 import { parseSections } from '../recipeText';
 import { splitAmountAndName } from '../ingredients';
@@ -191,14 +192,10 @@ export default function RecipeDetail({
               ))}
             </div>
 
-            <button
-              onClick={() => onAddToShoppingList(shoppingLines)}
-              className="w-full mt-6 py-4 rounded-2xl text-white font-semibold text-sm transition-all active:scale-98 flex items-center justify-center gap-2"
-              style={{ backgroundColor: COLORS.primary, boxShadow: '0 4px 16px rgba(38,70,83,0.35)' }}
-            >
+            <PrimaryButton onClick={() => onAddToShoppingList(shoppingLines)} className="mt-6">
               <ShoppingCart size={18} strokeWidth={2} />
               Zutaten zur Einkaufsliste hinzufügen
-            </button>
+            </PrimaryButton>
           </>
         ) : (
           <>
