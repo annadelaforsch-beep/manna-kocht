@@ -33,6 +33,11 @@ export const COLORS = {
   carbsText: '#B5652E',
   proteinBg: '#F6DAD1',
   proteinText: '#C1503A',
+
+  // Kräftige, gut unterscheidbare Farben für die Makro-Leiste (Petrol / Gelb / Koralle)
+  veggieBar: '#2A9D8F',
+  carbsBar: '#E9C46A',
+  proteinBar: '#E76F51',
 } as const;
 
 // Akzentfarbe je Kategorie – bewusst dezent eingesetzt (nur für die

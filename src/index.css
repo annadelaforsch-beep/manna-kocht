@@ -17,14 +17,20 @@
   box-sizing: border-box;
 }
 
-html,
-body {
+/* Horizontales Scrollen verhindern, OHNE position: sticky zu zerstören:
+   overflow-x: hidden auf body/#root würde diese zu Scroll-Containern machen,
+   an denen sticky-Elemente "kleben" statt am Viewport. Daher nur auf html
+   (wird auf den Viewport übertragen) und sonst mit "clip". */
+html {
   margin: 0;
   max-width: 100%;
   overflow-x: hidden;
 }
 
 body {
+  margin: 0;
+  max-width: 100%;
+  overflow-x: clip;
   background-color: #FAF6F0;
   font-family: system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -33,7 +39,7 @@ body {
 #root {
   min-height: 100svh;
   max-width: 100%;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 /* iOS Safari auto-zooms (and can pan the viewport sideways) when a

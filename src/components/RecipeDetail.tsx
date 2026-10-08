@@ -78,7 +78,7 @@ export default function RecipeDetail({
       </div>
 
       {/* Kompakter Kopf: kleines Foto/Icon, Titel, Meta */}
-      <div className="flex items-center gap-3.5 px-5 pt-4">
+      <div className="flex items-center gap-3.5 px-5 pt-3">
         <button
           onClick={() => recipe.image_url && setShowPhoto(true)}
           disabled={!recipe.image_url}
@@ -115,23 +115,23 @@ export default function RecipeDetail({
       </div>
 
       {/* Makro-Leiste */}
-      <div className="px-5 pt-4">
-        <div className="flex h-2 rounded-full overflow-hidden" style={{ backgroundColor: COLORS.mutedLight }}>
-          <div style={{ flexGrow: recipe.macro_veggies, backgroundColor: COLORS.veggieText }} />
-          <div style={{ flexGrow: recipe.macro_carbs, backgroundColor: COLORS.carbsText }} />
-          <div style={{ flexGrow: recipe.macro_protein, backgroundColor: COLORS.proteinText }} />
+      <div className="px-5 pt-3">
+        <div className="flex gap-[3px] h-2.5">
+          <MacroSegment value={recipe.macro_veggies} color={COLORS.veggieBar} first />
+          <MacroSegment value={recipe.macro_carbs} color={COLORS.carbsBar} />
+          <MacroSegment value={recipe.macro_protein} color={COLORS.proteinBar} last />
         </div>
-        <div className="flex gap-3.5 mt-1.5 text-[11px]" style={{ color: COLORS.muted }}>
-          <Legend color={COLORS.veggieText} label={`Gemüse ${recipe.macro_veggies}%`} />
-          <Legend color={COLORS.carbsText} label={`Carbs ${recipe.macro_carbs}%`} />
-          <Legend color={COLORS.proteinText} label={`Protein ${recipe.macro_protein}%`} />
+        <div className="flex gap-3 mt-1.5 text-[11px]" style={{ color: COLORS.muted }}>
+          <Legend color={COLORS.veggieBar} label="Gemüse" value={recipe.macro_veggies} />
+          <Legend color={COLORS.carbsBar} label="Carbs" value={recipe.macro_carbs} />
+          <Legend color={COLORS.proteinBar} label="Protein" value={recipe.macro_protein} />
         </div>
       </div>
 
       {/* Tabs (bleiben beim Scrollen oben) */}
       <div
-        className="sticky top-0 z-10 px-5 pt-3 pb-2"
-        style={{ backgroundColor: COLORS.bg, paddingTop: 'max(env(safe-area-inset-top), 12px)' }}
+        className="sticky top-0 z-10 px-5 pt-2 pb-2"
+        style={{ backgroundColor: COLORS.bg, paddingTop: 'max(env(safe-area-inset-top), 8px)' }}
       >
         <div className="flex p-[3px] rounded-2xl" style={{ backgroundColor: COLORS.mutedLight }} role="tablist">
           {(
@@ -263,11 +263,37 @@ export default function RecipeDetail({
   );
 }
 
-function Legend({ color, label }: { color: string; label: string }) {
+function MacroSegment({
+  value,
+  color,
+  first = false,
+  last = false,
+}: {
+  value: number;
+  color: string;
+  first?: boolean;
+  last?: boolean;
+}) {
+  // Ein Wert von 0 bekommt keinen Balken
+  if (value <= 0) return null;
+  return (
+    <div
+      style={{
+        flexGrow: value,
+        flexBasis: 0,
+        backgroundColor: color,
+        borderRadius: `${first ? 99 : 3}px ${last ? 99 : 3}px ${last ? 99 : 3}px ${first ? 99 : 3}px`,
+      }}
+    />
+  );
+}
+
+function Legend({ color, label, value }: { color: string; label: string; value: number }) {
   return (
     <span className="flex items-center gap-1">
-      <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+      <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
       {label}
+      <b style={{ color: COLORS.ink }}>{value}%</b>
     </span>
   );
 }
